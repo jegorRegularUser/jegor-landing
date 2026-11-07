@@ -71,9 +71,8 @@ export const ru = {
         years: '2023–2024',
       },
       {
-        // TODO(owner): перечень хакатонов и конкретные места
         pos: '3',
-        name: 'Хакатоны — призовые места',
+        name: 'Хакатоны — ЦТ АПК (1 место), Minin Code (2 место), AtomicHack (5 место), Цифровой прорыв',
         years: '—',
       },
     ],
@@ -87,8 +86,9 @@ export const ru = {
     nodes: [
       {
         period: '05.2024–08.2024',
-        org: 'СТАЖИРОВКА', // TODO(owner): название компании стажировки
+        org: 'СТАЖИРОВКА — WONDERTALES',
         points: [
+          'Платформа интерактивных сказок app.wondertales.io',
           'Vue.js: новые страницы и компоненты',
           'Новая логика для сайтов, улучшение UI',
         ],
@@ -202,11 +202,11 @@ export const ru = {
     lightboxAria: 'Просмотр документа',
     pencil: '11 шт., всё настоящее',
     items: [
-      { file: 'atomic', caption: 'Atomic' },
-      { file: 'digit', caption: 'Digit' },
-      { file: 'mezhdunarodnyy-apk', caption: 'Международный АПК' },
-      { file: 'mininser', caption: 'Минин — сертификат' },
-      { file: 'minindipl', caption: 'Минин — диплом' },
+      { file: 'atomic', caption: 'AtomicHack — 5 место' },
+      { file: 'digit', caption: 'Цифровой прорыв 2023' },
+      { file: 'mezhdunarodnyy-apk', caption: 'ЦТ АПК — 1 место' },
+      { file: 'mininser', caption: 'Minin Code — сертификат' },
+      { file: 'minindipl', caption: 'Minin Code — диплом' },
       { file: 'bjs', caption: 'BJS' },
       { file: 'netology-basic-js', caption: 'Нетология — Basic JavaScript' },
       { file: 'netology-html', caption: 'Нетология — HTML' },

@@ -70,9 +70,8 @@ export const en: Dict = {
         years: '2023–2024',
       },
       {
-        // TODO(owner): list of hackathons and places
         pos: '3',
-        name: 'Hackathons — prize places',
+        name: 'Hackathons — Agro-ICT Transformation (1st), Minin Code (2nd), AtomicHack (5th), Digital Breakthrough',
         years: '—',
       },
     ],
@@ -86,8 +85,12 @@ export const en: Dict = {
     nodes: [
       {
         period: '05.2024–08.2024',
-        org: 'INTERNSHIP', // TODO(owner): company name
-        points: ['Vue.js: new pages and components', 'New site logic, UI improvements'],
+        org: 'INTERNSHIP — WONDERTALES',
+        points: [
+          'Wondertales interactive-story platform (app.wondertales.io)',
+          'Vue.js: new pages and components',
+          'New site logic, UI improvements',
+        ],
       },
       {
         period: '08.2024–04.2026',
@@ -198,11 +201,11 @@ export const en: Dict = {
     lightboxAria: 'Document viewer',
     pencil: '11 pcs., all real',
     items: [
-      { file: 'atomic', caption: 'Atomic' },
-      { file: 'digit', caption: 'Digit' },
-      { file: 'mezhdunarodnyy-apk', caption: 'International APK' },
-      { file: 'mininser', caption: 'Minin — certificate' },
-      { file: 'minindipl', caption: 'Minin — diploma' },
+      { file: 'atomic', caption: 'AtomicHack — 5th place' },
+      { file: 'digit', caption: 'Digital Breakthrough 2023' },
+      { file: 'mezhdunarodnyy-apk', caption: 'Agro-ICT Transformation — 1st place' },
+      { file: 'mininser', caption: 'Minin Code — certificate' },
+      { file: 'minindipl', caption: 'Minin Code — diploma' },
       { file: 'bjs', caption: 'BJS' },
       { file: 'netology-basic-js', caption: 'Netology — Basic JavaScript' },
       { file: 'netology-html', caption: 'Netology — HTML' },
