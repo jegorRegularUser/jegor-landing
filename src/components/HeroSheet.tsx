@@ -11,7 +11,6 @@ import { useLang } from '../i18n/LangContext';
 import { useTheme } from '../theme/ThemeProvider';
 import { useReducedMotion } from '../hooks/useMedia';
 import { Sheet } from './Sheet';
-import { DimLink } from './DimLink';
 import { PencilMark } from './PencilMark';
 
 /** Окно осциллографа: живёт только в тёмной теме (спека §5.4). */
@@ -90,26 +89,25 @@ function OscilloscopeWindow() {
   );
 }
 
-/** Светлая тема: «Спецификация свечения» вместо канваса (спека §5.4). */
-function GradientSpec() {
+/** Светлая тема: фейковая ошибка React — градиент «не загрузился» (забавка 8.1). */
+function ErrorCard() {
   const ref = useRough<HTMLDivElement>('hachure-fill', 610, () => ({
     fillStyle: 'hachure',
     hachureGap: 9,
   }));
   return (
-    <div className="gradient-spec" ref={ref} aria-hidden="true">
-      <div className="gradient-spec__row">
-        <span className="gradient-spec__swatch" style={{ background: 'var(--accent2)' }} />
-        C1 — ЧЕРТЁЖНО-ГОЛУБОЙ
+    <div className="err-card" ref={ref} aria-hidden="true">
+      <div className="err-card__head">
+        <span>Uncaught Error</span>
+        <span>react-dom.development.js:15486</span>
       </div>
-      <div className="gradient-spec__row">
-        <span className="gradient-spec__swatch" style={{ background: 'var(--accent-dim)' }} />
-        C2 — РЕДЛАЙН ПРИГЛУШЁННЫЙ
-      </div>
-      <div className="gradient-spec__row">
-        <span className="gradient-spec__swatch" style={{ background: 'var(--bg)' }} />
-        C3 — ФОН
-      </div>
+      <pre>{`Error: gradient didn't load on light theme
+    at OscilloscopeWindow (sheet-01.tsx:42)
+    at renderWithHooks (react-dom.development.js:15486)
+    at mountIndeterminateComponent (react-dom.development.js:20074)
+    at beginWork (react-dom.development.js:26156)`}</pre>
+      <pre className="err-card__comment">{`// TODO: не забыть починить фон портрета на белой теме
+// шутка. на светлом фоне вместо осциллографа — чертёж`}</pre>
     </div>
   );
 }
@@ -175,7 +173,6 @@ export function HeroSheet() {
         tl.from('.callout', { autoAlpha: 0, stagger: 0.08, duration: 0.3 }, 0.5);
         tl.from('.callout svg path', { drawSVG: 0, duration: 0.5, stagger: 0.08 }, 0.5);
         tl.from('.hero__role', { autoAlpha: 0, y: 12, duration: 0.4 }, 0.4);
-        tl.from('.hero__contacts > *', { autoAlpha: 0, y: 8, stagger: 0.06, duration: 0.3 }, 0.55);
         tl.from('.title-block', { autoAlpha: 0, duration: 0.4 }, 0.8);
         tl.play();
     });
@@ -194,21 +191,15 @@ export function HeroSheet() {
       <div className="hero" ref={rootRef}>
         <div className="hero__text">
           <h1 className="hero__name" ref={nameRef} id="sheet-01-title" style={{ display: 'block' }}>
-            {t.hero.nameLines[0]}
-            <br />
-            {t.hero.nameLines[1]}
+            <span className="hero__name-line">{t.hero.nameLines[0]}</span>
+            <span className="hero__name-line">{t.hero.nameLines[1]}</span>
           </h1>
           <p className="hero__role">{t.hero.role}</p>
-          <div className="hero__contacts">
-            <DimLink href="https://t.me/panteloma">TG @panteloma</DimLink>
-            <DimLink href="mailto:dvoinyakovegor00@gmail.com">EMAIL</DimLink>
-            <DimLink href="https://github.com/jegorRegularUser">GITHUB</DimLink>
-          </div>
-          <PencilMark text={t.hero.pencil} style={{ bottom: '-34px', left: '40%' }} />
+          <PencilMark text={t.hero.pencil} style={{ bottom: '6px', left: '40%' }} />
         </div>
 
         <div className="hero__figure">
-          {theme === 'dark' ? <OscilloscopeWindow /> : <GradientSpec />}
+          {theme === 'dark' ? <OscilloscopeWindow /> : <ErrorCard />}
 
           <div className="hero__portrait-wrap" ref={portraitRef}>
             <div ref={silhouetteRef} style={{ position: 'relative' }}>
@@ -228,19 +219,19 @@ export function HeroSheet() {
             </div>
           </div>
 
-          <span className="callout" style={{ left: '2%', top: '8%' }} aria-hidden="true">
+          <span className="callout callout--city" style={{ left: '2%', top: '0%' }} aria-hidden="true">
             <svg width="52" height="14" viewBox="0 0 52 14">
               <path d="M0 7 H46 M42 2 L48 7 L42 12" fill="none" stroke="currentColor" strokeWidth="1.2" />
             </svg>
             {c1}
           </span>
-          <span className="callout" style={{ right: '0%', top: '46%' }} aria-hidden="true">
+          <span className="callout callout--hand" style={{ right: '2%', top: '60%' }} aria-hidden="true">
             {c2}
             <svg width="52" height="14" viewBox="0 0 52 14">
               <path d="M52 7 H6 M10 2 L4 7 L10 12" fill="none" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           </span>
-          <span className="callout" style={{ left: '38%', bottom: '12%' }} aria-hidden="true">
+          <span className="callout callout--scale" style={{ left: '0%', bottom: '8%' }} aria-hidden="true">
             <svg width="14" height="52" viewBox="0 0 14 52">
               <path d="M7 0 V46 M2 42 L7 48 L12 42" fill="none" stroke="currentColor" strokeWidth="1.2" />
             </svg>

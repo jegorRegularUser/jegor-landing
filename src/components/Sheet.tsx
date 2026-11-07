@@ -11,13 +11,15 @@ interface SheetProps {
   titleId: string;
   kicker: string;
   title?: string;
+  /** Дополнение в строке заголовка (например, «ВОЗРАСТ: 20»). */
+  titleExtra?: ReactNode;
   dense?: boolean;
   hero?: boolean;
   children: ReactNode;
 }
 
 /** Лист: двойная рамка ГОСТ, миллиметровка, метки координат, ревил (§4.0). */
-export function Sheet({ id, titleId, kicker, title, dense, hero, children }: SheetProps) {
+export function Sheet({ id, titleId, kicker, title, titleExtra, dense, hero, children }: SheetProps) {
   const ref = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
@@ -79,9 +81,12 @@ export function Sheet({ id, titleId, kicker, title, dense, hero, children }: She
           <span className="sheet__kicker-rule" aria-hidden="true" />
         </div>
         {title && (
-          <h2 className="sheet__title" id={titleId}>
-            {title}
-          </h2>
+          <div className="sheet__title-row">
+            <h2 className="sheet__title" id={titleId}>
+              {title}
+            </h2>
+            {titleExtra}
+          </div>
         )}
         {!title && <h2 className="visually-hidden-title" id={titleId} hidden>{kicker}</h2>}
         {children}

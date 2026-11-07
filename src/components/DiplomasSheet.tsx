@@ -105,7 +105,7 @@ export function DiplomasSheet() {
           />
         ))}
       </div>
-      <PencilMark text={t.diplomas.pencil} style={{ top: '-34px', right: '4%' }} />
+      <PencilMark text={t.diplomas.pencil} style={{ top: '6px', right: '4%' }} />
 
       <dialog
         className="lightbox"

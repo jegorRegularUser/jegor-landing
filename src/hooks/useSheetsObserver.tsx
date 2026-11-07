@@ -11,35 +11,39 @@ interface ObserverState {
 const SheetsContext = createContext<ObserverState>({ activeId: 'sheet-01', dense: false });
 
 /**
- * Один IntersectionObserver на всё: активный лист = секция, пересекающая
- * середину вьюпорта; плотные зоны — листы 04 и 06 (спека §4.0).
+ * Активный лист — по скроллу (мгновенно, без лага IO на границах):
+ * последний лист, чей верх прошёл середину вьюпорта. Плотные зоны
+ * (листы 04 и 06) — по IntersectionObserver (спека §4.0).
  */
 export function SheetsObserverProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ObserverState>({ activeId: 'sheet-01', dense: false });
 
   useEffect(() => {
-    const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-sheet]'));
-    const midpoints = new Map<string, boolean>();
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const mid = window.innerHeight / 2;
+      const sections = document.querySelectorAll<HTMLElement>('[data-sheet]');
+      let active = 'sheet-01';
+      for (const s of sections) {
+        if (s.getBoundingClientRect().top <= mid) active = s.id;
+      }
+      setState((prev) => (prev.activeId === active ? prev : { ...prev, activeId: active }));
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute);
+    };
+    compute();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        let active = state.activeId;
-        let dense = false;
-        for (const e of entries) {
-          const id = (e.target as HTMLElement).id;
-          midpoints.set(id, e.isIntersecting);
-          if (e.isIntersecting && (e.target as HTMLElement).dataset.dense === 'true') {
-            dense = true;
-          }
-        }
-        for (const id of midpoints.keys()) {
-          if (midpoints.get(id)) active = id;
-        }
-        setState({ activeId: active, dense });
-      },
-      { rootMargin: '-45% 0px -45% 0px', threshold: 0 },
-    );
-
+  useEffect(() => {
     const denseIo = new IntersectionObserver(
       (entries) => {
         setState((s) => {
@@ -49,16 +53,10 @@ export function SheetsObserverProvider({ children }: { children: ReactNode }) {
       },
       { threshold: 0.35 },
     );
-
-    for (const s of sections) {
-      io.observe(s);
+    for (const s of document.querySelectorAll<HTMLElement>('[data-sheet]')) {
       if (s.dataset.dense === 'true') denseIo.observe(s);
     }
-    return () => {
-      io.disconnect();
-      denseIo.disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => denseIo.disconnect();
   }, []);
 
   return <SheetsContext.Provider value={state}>{children}</SheetsContext.Provider>;

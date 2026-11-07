@@ -85,7 +85,7 @@ export function mountShaderQuad(
   const uTime = U('uTime');
   const uMouse = U('uMouse');
   const uAmp = U('uAmp');
-  gl.uniform1f(uAmp, 1.1);
+  gl.uniform1f(uAmp, 1.45); // приёмка: градиент был темнее/плоское фолбэка
   const glCtx = gl;
   const mouse = [0.5, 0.5];
   let target = [0.5, 0.5];

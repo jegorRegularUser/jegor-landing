@@ -6,6 +6,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
@@ -16,6 +17,7 @@ body {
   font-size: 16px;
   line-height: 1.65;
   transition: background-color 0.3s, color 0.3s;
+  overflow-x: clip;
 }
 
 @media (min-width: 768px) {

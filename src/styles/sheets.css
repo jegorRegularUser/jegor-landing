@@ -13,7 +13,9 @@
   position: relative;
   border: 1.5px solid var(--ink);
   padding: clamp(20px, 4vw, 48px);
-  background-color: var(--bg);
+  /* Прозрачная подложка: CAD-курсор (z-index -1) просвечивает под контентом,
+     миллиметровка на background-image остаётся. */
+  background-color: transparent;
   background-image:
     linear-gradient(var(--grid-minor) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),

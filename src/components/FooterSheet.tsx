@@ -1,10 +1,18 @@
+import { useLayoutEffect, useRef } from 'react';
 import { useLang } from '../i18n/LangContext';
+import { sheetReveal } from '../lib/motion';
 
 /** ЛИСТ 08 — Регистрация изменений (футер, §4.8): без анимаций кроме ревила. */
 export function FooterSheet() {
   const { t } = useLang();
+  const ref = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    if (ref.current) sheetReveal(ref.current);
+  }, []);
+
   return (
-    <footer className="sheet footer-sheet" id="sheet-08" aria-label={t.footer.kicker}>
+    <footer className="sheet footer-sheet" id="sheet-08" data-sheet aria-label={t.footer.kicker} ref={ref}>
       <div className="sheet__paper">
         <div className="sheet__kicker">
           <span className="sheet__kicker-label">{t.footer.kicker}</span>

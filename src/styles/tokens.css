@@ -6,6 +6,17 @@
   --font-body: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-hand: Neucha, 'Comic Sans MS', cursive;
+
+  /* Сетка отступов (ревизия приёмки): одна шкала вместо россыпи значений. */
+  --s-1: 4px;
+  --s0: 8px;
+  --s1: 12px;
+  --s2: 16px;
+  --s3: 24px;
+  --s4: 32px;
+  --s5: 48px;
+  --s6: 64px;
+  --s7: 96px;
 }
 
 :root[data-theme='dark'] {

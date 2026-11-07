@@ -870,3 +870,538 @@
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ==== РЕВИЗИЯ 01: приёмка ==== */
+
+/* --- hero: фамилия не переносится, портрет крупнее --- */
+.hero__name {
+  white-space: nowrap;
+  font-size: clamp(2.4rem, 9.2vw, 6.4rem);
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    grid-template-columns: 50% 50%;
+  }
+}
+
+.hero__name-line {
+  display: block;
+}
+
+/* --- CAD-курсор под контентом --- */
+.cad-cursor {
+  z-index: -1;
+}
+
+.cad-cursor__badge {
+  opacity: 0.8;
+}
+
+/* --- возраст в строке заголовка листа --- */
+.sheet__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.about__age {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s0);
+}
+
+.about__age b {
+  position: relative;
+  color: var(--ink);
+  font-weight: 500;
+  padding: 2px 10px;
+}
+
+/* --- дипломы: единая пропорция, ряды ровные --- */
+.diploma-grid {
+  gap: var(--s3);
+}
+
+.diploma-card__thumb {
+  aspect-ratio: 3 / 4;
+  object-fit: contain;
+  background: var(--surface);
+  padding: var(--s0);
+  width: 100%;
+}
+
+.diploma-card__caption {
+  margin-top: var(--s0);
+}
+
+/* --- техно-марки: бесконечная лента, два ряда --- */
+.tech-marquee {
+  display: grid;
+  gap: var(--s1);
+  overflow: hidden;
+  padding: var(--s0) 0;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.tech-marquee__row {
+  display: flex;
+  width: max-content;
+  gap: var(--s1);
+  animation: marquee-left 60s linear infinite;
+}
+
+.tech-marquee__row--rev {
+  animation-name: marquee-right;
+  animation-duration: 74s;
+}
+
+.tech-marquee:hover .tech-marquee__row,
+.tech-marquee:focus-within .tech-marquee__row {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-left {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tech-marquee {
+    overflow-x: auto;
+  }
+  .tech-marquee__row {
+    animation: none;
+  }
+}
+
+.tech-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s0);
+}
+
+.tech-chip__icon {
+  width: 20px;
+  height: 20px;
+  filter: saturate(0.85);
+  flex: 0 0 auto;
+}
+
+.tech-hint {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: var(--s1);
+}
+
+/* --- фейковая ошибка React на светлой теме (забавка 8.1) --- */
+.err-card {
+  position: absolute;
+  z-index: 0;
+  width: 86%;
+  left: 8%;
+  top: 4%;
+  background: rgba(30, 14, 14, 0.96);
+  color: #f0ddd6;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  border: 1px solid var(--accent-dim);
+  box-shadow: 0 8px 32px rgba(24, 42, 60, 0.35);
+}
+
+.err-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: var(--s0) var(--s2);
+  background: rgba(140, 30, 20, 0.55);
+  font-weight: 600;
+}
+
+.err-card pre {
+  margin: 0;
+  padding: var(--s1) var(--s2) var(--s2);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.err-card__comment {
+  color: #9ec49a;
+}
+
+/* --- проекты: большие блоки с каруселью --- */
+.proj-block {
+  margin-bottom: var(--s5);
+}
+
+.proj-block:last-child {
+  margin-bottom: 0;
+}
+
+.proj-carousel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+
+.proj-carousel__track {
+  display: flex;
+  transition: transform 0.5s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proj-carousel__track {
+    transition: none;
+  }
+}
+
+.proj-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+.proj-carousel__slide img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: saturate(0.85);
+}
+
+.proj-carousel__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-top: var(--s2);
+}
+
+.proj-nav__btn {
+  color: transparent;
+  font-size: 0;
+}
+
+.proj-block__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s2);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--s2);
+}
+
+.proj-block__head b {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.proj-block__desc {
+  margin-top: var(--s2);
+  max-width: 70ch;
+}
+
+.proj-slot {
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+}
+
+/* --- контакты: штампы-кнопки с импактом --- */
+.stamp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.stamp-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s0);
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--hairline);
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.stamp-action:hover,
+.stamp-action:focus-visible {
+  border-color: var(--ink);
+}
+
+.stamp-action__stamp {
+  position: absolute;
+  inset: -8px -12px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  border: 1.5px solid var(--accent);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.approved-stamp {
+  font-size: clamp(22px, 4vw, 34px);
+  padding: 20px 40px;
+  letter-spacing: 0.14em;
+}
+
+.approved-stamp__inner {
+  position: absolute;
+  inset: -8px;
+  pointer-events: none;
+}
+
+/* --- физика: сцена, куски, корзина --- */
+.physics-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  overflow: hidden;
+}
+
+.physics-piece {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  margin: 0 !important;
+  will-change: transform;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.physics-bin {
+  position: absolute;
+  width: 120px;
+  height: 80px;
+  border: 2px dashed var(--muted);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-family: var(--font-mono);
+}
+
+.physics-bin::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: 4px;
+  font-size: 12px;
+}
+
+/* --- расшатанная кнопка темы: гвозди --- */
+.theme-btn--loose {
+  border-color: var(--accent);
+}
+
+.nail-mark {
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+/* --- выноски hero: не наезжают на лицо, мобильные правила --- */
+.callout--hand,
+.callout--scale {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .callout--hand,
+  .callout--scale {
+    display: flex;
+  }
+}
+
+/* --- ось-гит: раскладка веток --- */
+.rail {
+  position: relative;
+  min-height: 520px;
+  margin-top: var(--s3);
+}
+
+.rail__svg--branch {
+  width: 100%;
+  height: 240px;
+}
+
+.rail__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.rail .exp-node {
+  position: absolute;
+}
+
+.rail__note {
+  position: absolute;
+  left: 36%;
+  top: 47%;
+  font-family: var(--font-hand);
+  font-size: 20px;
+  color: var(--muted);
+  rotate: -2deg;
+}
+
+@media (max-width: 899px) {
+  .rail {
+    min-height: 0;
+  }
+  .rail__svg--branch {
+    display: none;
+  }
+  .rail__canvas {
+    position: static;
+    display: grid;
+    gap: var(--s3);
+  }
+  .rail .exp-node {
+    position: static !important;
+    width: 100% !important;
+  }
+  .rail__note {
+    position: static;
+    margin-top: var(--s2);
+  }
+}
+
+/* --- слои чипа, иконка кнопки темы, заком-обложка --- */
+.chip-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.chip-layer--fill .rough-overlay {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+.tech-chip:hover .chip-layer--fill .rough-overlay,
+.tech-chip:focus-visible .chip-layer--fill .rough-overlay,
+.tech-chip[aria-pressed='true'] .chip-layer--fill .rough-overlay {
+  opacity: 0.9;
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-btn--loose {
+  border-color: var(--accent);
+}
+
+.sketch-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  animation: cover-in 0.25s forwards;
+}
+
+.sketch-cover svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.75;
+}
+
+@keyframes cover-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sketch-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sketch-cover {
+    animation-duration: 0.01s;
+  }
+}
+
+/* --- приёмка: мобильные строки штампа контактов (клампится в столбик) --- */
+@media (max-width: 559px) {
+  .stamp-grid__row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'label label'
+      'value action';
+    row-gap: var(--s0);
+  }
+  .stamp-grid__row > .stamp-grid__label {
+    grid-area: label;
+  }
+  .stamp-grid__row > .stamp-grid__value {
+    grid-area: value;
+  }
+  .stamp-grid__row > span:last-child {
+    grid-area: action;
+    justify-self: end;
+  }
+}
+
+/* --- штамп-таблица на фото: подложка бумаги --- */
+.title-block {
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  padding: 2px;
+}
+
+.err-card {
+  top: 8%;
+}
+
+/* --- координатные метки не подрезаются --- */
+.sheet__marks {
+  inset: 0 6px;
+}
+
+/* --- шапка: видно на мобильном (горскролл коротких якорей) --- */
+@media (max-width: 767px) {
+  .set-contents {
+    display: flex;
+  }
+  .set-contents a {
+    padding: 6px 6px;
+  }
+}

@@ -1,33 +1,62 @@
 import { useLayoutEffect, useRef } from 'react';
 import { gsap, ScrollTrigger } from '../lib/gsap';
 import { annotate } from 'rough-notation';
-import { redrawAll } from '../rough/registry';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import { useMedia } from '../hooks/useMedia';
 import { Sheet } from './Sheet';
-import { PencilMark } from './PencilMark';
 
-const RAIL_H = 'M0 20 H1000';
-const RAIL_V = 'M20 0 V1000';
+/**
+ * ЛИСТ 03 — Опыт как git-история (ревизия приёмки):
+ * Корсофт — основная ветка (08.2024 → Н.В.), стажировка Wondertales — коммит до неё,
+ * фриланс — ветка, отделившаяся в 04.2025 и вмержившаяся в 10.2025,
+ * ЦЭМП — ветка, отросшая от Корсофта в 04.2026 и идущая до Н.В. параллельно.
+ * Ось — чистый SVG + DrawSVG (карантин rough соблюдён).
+ */
 
-/** Один узел оси: rough-рамка seed 400–403 (реестр §4.9). */
-function ExperienceNode({ seed, period, org, points, active }: {
+const MAIN_H = 'M 0 120 H 1000';
+const FREELANCE_H = 'M 355 120 C 385 120 385 205 415 205 H 585 C 615 205 615 120 645 120';
+const CEMP_H = 'M 710 120 C 740 120 740 40 770 40 H 1000';
+
+interface RailVariant {
+  main: string;
+  freelance: string;
+  cemp: string;
+  nodes: { left: string; top: string; width: string }[];
+}
+
+const DESKTOP: RailVariant = {
+  main: MAIN_H,
+  freelance: FREELANCE_H,
+  cemp: CEMP_H,
+  // Позиции карточек (десктоп): стажировка и ЦЭМП сверху, Корсофт и фриланс снизу.
+  nodes: [
+    { left: '0%', top: '0px', width: '21%' }, // Wondertales
+    { left: '9%', top: '58%', width: '24%' }, // Корсофт
+    { left: '37%', top: '74%', width: '24%' }, // Фриланс
+    { left: '73%', top: '0px', width: '26%' }, // ЦЭМП
+  ],
+};
+
+function ExperienceNode({ seed, period, org, points, now, style }: {
   seed: number;
   period: string;
   org: string;
   points: string[];
-  active?: boolean;
+  now?: boolean;
+  style: React.CSSProperties;
 }) {
-  const ref = useRough<HTMLDivElement>('frame', seed, () => ({ padding: 8 }));
+  const { t } = useLang();
+  const ref = useRough<HTMLDivElement>('frame', seed, () => ({
+    padding: 8,
+    colorKey: now ? 'accent' : 'ink',
+  }));
   const orgRef = useRef<HTMLHeadingElement>(null);
 
   useLayoutEffect(() => {
     if (!orgRef.current) return;
-    const sheet = document.getElementById('sheet-03');
-    if (!sheet) return;
     let ann: { show(): void; hide(): void; remove(): void } | null = null;
-    ann = annotate(orgRef.current, { type: 'underline', strokeWidth: 2 });
+    ann = annotate(orgRef.current, { type: 'underline', strokeWidth: 2, animationDuration: 0 });
     const st = ScrollTrigger.create({
       trigger: orgRef.current,
       start: 'top 80%',
@@ -41,10 +70,10 @@ function ExperienceNode({ seed, period, org, points, active }: {
   }, [org]);
 
   return (
-    <div ref={ref} className={`exp-node${active ? ' exp-node--active' : ''}`}>
+    <div ref={ref} className="exp-node" style={style}>
       <span className="exp-node__period">
         {period}
-        {active && <span className="now-pulse">●</span>}
+        {now && <span className="now-pulse">● {t.experience.nowMark}</span>}
       </span>
       <h3 className="exp-node__org" ref={orgRef}>
         {org}
@@ -58,61 +87,32 @@ function ExperienceNode({ seed, period, org, points, active }: {
   );
 }
 
-/** ЛИСТ 03 — Опыт («Монтажная ось»): DrawSVG-ось, MorphSVG на брейкпоинте (§4.3). */
 export function ExperienceSheet() {
   const { t } = useLang();
   const reduced = useMedia('(prefers-reduced-motion: reduce)');
-  const fine = useMedia('(pointer: fine)');
+  const desktop = useMedia('(min-width: 900px)');
   const railRef = useRef<SVGSVGElement>(null);
-  const railPathRef = useRef<SVGPathElement>(null);
 
-  // Ось: чистый SVG + DrawSVG (карантин соблюдён — rough не трогаем).
+  // DrawSVG по всем трем путям оси (чистые SVG).
   useLayoutEffect(() => {
-    const path = railPathRef.current;
-    if (!path || reduced) return;
-    const draw = gsap.from(path, {
-      drawSVG: 0,
-      duration: 0.8,
-      ease: 'power2.out',
-      scrollTrigger: { trigger: railRef.current, start: 'top 80%', once: true },
+    const paths = railRef.current?.querySelectorAll('path');
+    if (!paths?.length || reduced) return;
+    const tweens = Array.from(paths).map((p, i) =>
+      gsap.from(p, {
+        drawSVG: 0,
+        duration: 0.7,
+        delay: i * 0.25,
+        ease: 'power2.out',
+        scrollTrigger: { trigger: railRef.current, start: 'top 80%', once: true },
+      }),
+    );
+    return () => tweens.forEach((tw) => {
+      tw.scrollTrigger?.kill();
+      tw.kill();
     });
-    return () => {
-      draw.scrollTrigger?.kill();
-      draw.kill();
-    };
-  }, [reduced]);
+  }, [reduced, desktop]);
 
-  // Морф H↔V на брейкпоинте 768px; тач и reduced — кроссфейд (спека §4.3).
-  useLayoutEffect(() => {
-    const path = railPathRef.current;
-    if (!path) return;
-    const mm = gsap.matchMedia();
-    mm.add('(min-width: 900px)', () => {
-      if (reduced || !fine) return;
-      if (path.getAttribute('d') !== RAIL_H) {
-        gsap.to(path, {
-          morphSVG: RAIL_H,
-          duration: 0.6,
-          ease: 'power2.inOut',
-          onComplete: () => {
-            path.setAttribute('d', RAIL_H);
-            gsap.set(path, { morphSVG: undefined as unknown as string });
-            // Хук (iv): после морфа — redraw rough-узлов секции.
-            redrawAll();
-            ScrollTrigger.refresh();
-          },
-        });
-      } else {
-        path.setAttribute('d', RAIL_H);
-      }
-    });
-    mm.add('(max-width: 899px)', () => {
-      path.setAttribute('d', RAIL_V);
-    });
-    return () => mm.revert();
-  }, [reduced, fine]);
-
-  // Узлы: stagger fade+rise 60ms (спека §4.3).
+  // Узлы: stagger fade+rise.
   useLayoutEffect(() => {
     if (reduced) return;
     const nodes = document.querySelectorAll('#sheet-03 .exp-node');
@@ -131,37 +131,64 @@ export function ExperienceSheet() {
     });
   }, [reduced, t]);
 
-  const nodes = t.experience.nodes;
+  const [n0, n1, n2, n3] = t.experience.nodes;
+  const positions = DESKTOP.nodes;
 
   return (
     <Sheet id="sheet-03" titleId="sheet-03-title" kicker={t.experience.kicker} title={t.experience.title}>
       <div className="rail">
-        <svg ref={railRef} className="rail__svg" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true">
-          <path
-            ref={railPathRef}
-            d={RAIL_H}
-            fill="none"
-            stroke="var(--muted)"
-            strokeWidth="1.5"
-          />
+        <svg
+          ref={railRef}
+          className="rail__svg rail__svg--branch"
+          viewBox="0 0 1000 240"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path d={DESKTOP.main} fill="none" stroke="var(--muted)" strokeWidth="1.5" />
+          <path d={DESKTOP.freelance} fill="none" stroke="var(--accent2)" strokeWidth="1.2" />
+          <path d={DESKTOP.cemp} fill="none" stroke="var(--accent)" strokeWidth="1.5" />
+          {/* Н.В. на конце основной ветки (Корсофт) и ветки ЦЭМП */}
+          <circle cx="995" cy="120" r="4" fill="var(--accent)" />
+          <circle cx="995" cy="40" r="4" fill="var(--accent)" />
         </svg>
-        <div className="rail__nodes">
-          {nodes.map((n, i) => (
-            <ExperienceNode
-              key={n.org}
-              seed={400 + i}
-              period={n.period}
-              org={n.org}
-              points={n.points}
-              active={i === nodes.length - 1}
-            />
-          ))}
+        <div className="rail__canvas">
+          <ExperienceNode
+            seed={400}
+            period={n0.period}
+            org={n0.org}
+            points={n0.points}
+            style={{ ...cssSize(positions[0]) }}
+          />
+          <ExperienceNode
+            seed={401}
+            period={n1.period}
+            org={n1.org}
+            points={n1.points}
+            now
+            style={{ ...cssSize(positions[1]) }}
+          />
+          <ExperienceNode
+            seed={402}
+            period={n2.period}
+            org={n2.org}
+            points={n2.points}
+            style={{ ...cssSize(positions[2]) }}
+          />
+          <ExperienceNode
+            seed={403}
+            period={n3.period}
+            org={n3.org}
+            points={n3.points}
+            now
+            style={{ ...cssSize(positions[3]) }}
+          />
         </div>
-        <PencilMark text={t.experience.pencil} style={{ top: '-34px', right: '6%' }} />
+        <p className="rail__note">{t.experience.branchNote}</p>
       </div>
-      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--muted)' }}>
-        {t.experience.freelanceRail}: {nodes[2].period}
-      </p>
     </Sheet>
   );
+}
+
+function cssSize(p: { left: string; top: string; width: string }): React.CSSProperties {
+  return { left: p.left, top: p.top, width: p.width };
 }

@@ -25,6 +25,8 @@ export interface RoughOpts {
   fillStyle?: 'hachure' | 'cross-hatch' | 'solid' | 'zigzag';
   hachureGap?: number;
   hachureAngle?: number;
+  /** Стрелка влево (зеркало). */
+  flip?: boolean;
 }
 
 interface Entry {
@@ -84,6 +86,10 @@ function unrotate(dx: number, dy: number, mount: HTMLElement): [number, number] 
 function drawEntry(entry: Entry): void {
   const { kind, seed, opts, mount } = entry;
   const target = opts.targetEl ?? mount;
+  // Маунт без позиционирования якорит overlay к чужому предку — чиним на месте.
+  if (getComputedStyle(mount).position === 'static') {
+    mount.style.position = 'relative';
+  }
   const mountRect = mount.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
   const pad = opts.padding ?? 0;
@@ -186,6 +192,7 @@ function drawEntry(entry: Entry): void {
           strokeWidth: opts.strokeWidth ?? defaults.strokeWidth,
         }),
       );
+      if (opts.flip) svg.style.transform = 'scaleX(-1)';
       break;
     }
     case 'hachure-fill': {
@@ -209,7 +216,7 @@ function drawEntry(entry: Entry): void {
         rc.rectangle(dx - pad, dy - pad, w + pad * 2, h + pad * 2, {
           seed,
           roughness: opts.roughness ?? defaults.roughness,
-          bowing: opts.bowing,
+          bowing: opts.bowing ?? 1, // undefined в прод-минификации даёт NaN (приёмка)
           stroke: color,
           strokeWidth: opts.strokeWidth ?? defaults.strokeWidth,
         }),

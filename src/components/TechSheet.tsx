@@ -1,9 +1,33 @@
-import { useRef, useState } from 'react';
-import type { KeyboardEvent, PointerEvent } from 'react';
+import { useState } from 'react';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import { Sheet } from './Sheet';
 import { PencilMark } from './PencilMark';
+
+/* Иконки стеков: пользователь кладёт PNG в src/assets/tech-icons/<slug>.png —
+   чип подхватывает сам. Нет иконки — чип остаётся текстовым. */
+const icons = import.meta.glob<string>('../assets/tech-icons/*.png', {
+  eager: true,
+  import: 'default',
+});
+
+function iconFor(label: string): string | undefined {
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, '-')
+    .replace(/\./g, '');
+  return icons[`../assets/tech-icons/${slug}.png`];
+}
+
+function ChipLook({ label }: { label: string }) {
+  const icon = iconFor(label);
+  return (
+    <>
+      {icon && <img className="tech-chip__icon" src={icon} alt="" width={20} height={20} />}
+      {label}
+    </>
+  );
+}
 
 function Chip({ label, index }: { label: string; index: number }) {
   const [pressed, setPressed] = useState(false);
@@ -22,102 +46,47 @@ function Chip({ label, index }: { label: string; index: number }) {
     >
       <span className="chip-layer" ref={frameRef} aria-hidden="true" />
       <span className="chip-layer chip-layer--fill" ref={fillRef} aria-hidden="true" />
-      {label}
+      <ChipLook label={label} />
     </button>
   );
 }
 
-/** ЛИСТ 04 — Технологии: линейка + drag/snap-слайдер чипов (§4.4). */
+/**
+ * ЛИСТ 04 — Технологии (ревизия приёмки): бесконечная лента в два ряда
+ * (CSS-marquee без зависимостей), пауза на hover/focus, чипы кликабельны.
+ */
 export function TechSheet() {
   const { t } = useLang();
-  const trackRef = useRef<HTMLUListElement>(null);
-  const indicatorRef = useRef<HTMLDivElement>(null);
-  const drag = useRef({ down: false, startX: 0, startScroll: 0, moved: false });
-
   const chips = t.tech.chips;
-  const zones = t.tech.zones;
-  const zoneList = [
-    { label: zones.fe, from: 0, to: 10 },
-    { label: zones.be, from: 10, to: 14 },
-    { label: zones.tools, from: 14, to: 16 },
-  ];
-
-  const syncIndicator = () => {
-    const track = trackRef.current;
-    if (!track || !indicatorRef.current) return;
-    const max = track.scrollWidth - track.clientWidth;
-    const frac = max > 0 ? track.scrollLeft / max : 0;
-    // transform в scroll-хендлере разрешён: это не rough (спека §4.4).
-    indicatorRef.current.style.transform = `translateX(${frac * 100}%)`;
-  };
-
-  const onPointerDown = (e: PointerEvent<HTMLUListElement>) => {
-    if (e.pointerType !== 'mouse') return;
-    const track = trackRef.current;
-    if (!track) return;
-    drag.current = { down: true, startX: e.clientX, startScroll: track.scrollLeft, moved: false };
-    track.classList.add('dragging');
-    track.setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e: PointerEvent<HTMLUListElement>) => {
-    const track = trackRef.current;
-    if (!track || !drag.current.down) return;
-    const dx = e.clientX - drag.current.startX;
-    if (Math.abs(dx) > 4) drag.current.moved = true;
-    track.scrollLeft = drag.current.startScroll - dx;
-  };
-
-  const onPointerUp = (e: PointerEvent<HTMLUListElement>) => {
-    const track = trackRef.current;
-    if (!track) return;
-    drag.current.down = false;
-    track.classList.remove('dragging');
-    if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId);
-  };
-
-  const onKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const chip = track.querySelector<HTMLElement>('.tech-chip');
-    const step = chip ? chip.offsetWidth + 12 : 120;
-    if (e.key === 'ArrowRight') track.scrollBy({ left: step, behavior: 'smooth' });
-    if (e.key === 'ArrowLeft') track.scrollBy({ left: -step, behavior: 'smooth' });
-  };
+  const half = Math.ceil(chips.length / 2);
+  const rows: [typeof chips, typeof chips] = [chips.slice(0, half), chips.slice(half)];
 
   return (
     <Sheet id="sheet-04" titleId="sheet-04-title" kicker={t.tech.kicker} title={t.tech.title} dense>
-      <div className="tech-ruler" aria-hidden="true">
-        {zoneList.map((z) => (
-          <span
-            key={z.label}
-            className="tech-ruler__zone"
-            style={{ left: `${(z.from / 16) * 100}%`, width: `${((z.to - z.from) / 16) * 100}%` }}
-          >
-            {z.label}
-          </span>
+      <div className="tech-marquee">
+        {rows.map((row, r) => (
+          <div key={r} className={`tech-marquee__row${r === 1 ? ' tech-marquee__row--rev' : ''}`}>
+            {[0, 1].map((copy) => (
+              <div className="tech-marquee__track" key={copy} aria-hidden={copy === 1 || undefined}>
+                {row.map((c) => {
+                  const index = chips.indexOf(c);
+                  return copy === 0 ? (
+                    <span key={c} style={{ display: 'inline-flex' }}>
+                      <Chip label={c} index={index} />
+                    </span>
+                  ) : (
+                    <span key={c} className="tech-chip" style={{ display: 'inline-flex' }}>
+                      <ChipLook label={c} />
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         ))}
-        <div className="tech-ruler__indicator" ref={indicatorRef} />
       </div>
-      <ul
-        className="tech-track"
-        ref={trackRef}
-        tabIndex={0}
-        aria-label={t.tech.title}
-        onScroll={syncIndicator}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onKeyDown={onKeyDown}
-      >
-        {chips.map((c, i) => (
-          <li key={c}>
-            <Chip label={c} index={i} />
-          </li>
-        ))}
-      </ul>
-      <PencilMark text={t.tech.pencil} style={{ top: '-34px', right: '10%' }} />
+      <p className="tech-hint">{t.tech.hint}</p>
+      <PencilMark text={t.tech.pencil} style={{ top: '6px', right: '10%' }} />
     </Sheet>
   );
 }

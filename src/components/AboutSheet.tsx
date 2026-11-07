@@ -13,7 +13,7 @@ export function AboutSheet() {
   const phraseRefs = useRef<(HTMLElement | null)[]>([]);
   const groupRef = useNotationGroup(
     phraseRefs,
-    t.about.annotate.map(() => ({ type: 'underline' as const, strokeWidth: 2 })),
+    t.about.annotate.map(() => ({ type: 'underline' as const, strokeWidth: 2, animationDuration: 0 })),
     [t],
   );
 
@@ -51,7 +51,7 @@ export function AboutSheet() {
               <span key={i}>{part.text}</span>
             ),
           )}
-          <PencilMark text={t.about.pencil} style={{ top: '-30px', right: '4%' }} />
+          <PencilMark text={t.about.pencil} style={{ top: '6px', right: '4%' }} />
         </div>
         <div>
           <p className="about__age">
@@ -63,9 +63,9 @@ export function AboutSheet() {
           <table className="pos-table">
             <thead>
               <tr>
-                <th scope="col">ПОЗ.</th>
-                <th scope="col">НАИМЕНОВАНИЕ</th>
-                <th scope="col">ГОДЫ</th>
+                <th scope="col">{t.about.tableHead.pos}</th>
+                <th scope="col">{t.about.tableHead.name}</th>
+                <th scope="col">{t.about.tableHead.years}</th>
               </tr>
             </thead>
             <tbody>
@@ -107,6 +107,7 @@ function splitByPhrases(note1: string, note2: string, phrases: string[]): Part[]
     push(rest, false);
   };
   consume(note1);
+  push(' ', false);
   consume(note2);
   return parts;
 }
