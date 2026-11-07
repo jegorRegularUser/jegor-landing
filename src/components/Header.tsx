@@ -5,6 +5,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { useSheetsObserver } from '../hooks/useSheetsObserver';
 import { useRough } from '../rough/useRough';
 import { useMedia } from '../hooks/useMedia';
+import { useChangeLog } from '../state/ChangeLog';
 import { knock } from '../lib/knock';
 import type { Playground } from '../lib/physics';
 import { CAD_TOGGLE_EVENT } from './CadCursor';
@@ -47,6 +48,7 @@ export function Header() {
   const { theme, toggle: toggleTheme } = useTheme();
   const { activeId } = useSheetsObserver();
   const reduced = useMedia('(prefers-reduced-motion: reduce)');
+  const { addChange } = useChangeLog();
   const [cad, setCad] = useState(cadOn);
   const themeBtnRef = useRough<HTMLButtonElement>('stamp', 501, () => ({
     colorKey: 'accent',
@@ -79,7 +81,13 @@ export function Header() {
     gsap.fromTo(
       btn,
       { rotate: -4 * s, y: s * 2 },
-      { rotate: 3 * s, y: 0, duration: 0.7, ease: 'elastic.out(1, 0.35)', transformOrigin: 'bottom left' },
+      {
+        rotate: 3 * s,
+        y: 0,
+        duration: 0.7,
+        ease: 'elastic.out(1, 0.35)',
+        transformOrigin: 'bottom left',
+      },
     );
   };
 
@@ -88,6 +96,7 @@ export function Header() {
     const btn = themeBtnRef.current;
     if (!btn || playgroundRef.current) return;
     setStage(3);
+    addChange(t.footer.dynamic.button);
     const { createPlayground } = await import('../lib/physics');
     const pg = await createPlayground(document.body, {
       onImpact: (_el, speed) => {
@@ -147,6 +156,7 @@ export function Header() {
 
   const onThemeClick = () => {
     toggleTheme();
+    addChange(t.footer.dynamic.theme);
     if (stage < 2) {
       const next = (stage + 1) as ThemeStage;
       setStage(next);
@@ -208,7 +218,10 @@ export function Header() {
             type="button"
             className="toggle-btn"
             aria-label={t.nav.langAria}
-            onClick={() => setLang(lang === 'ru' ? 'en' : 'ru')}
+            onClick={() => {
+              setLang(lang === 'ru' ? 'en' : 'ru');
+              addChange(t.footer.dynamic.lang);
+            }}
           >
             {t.nav.lang}
           </button>

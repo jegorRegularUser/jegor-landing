@@ -4,9 +4,9 @@ import type { Dict } from './ru';
  *  Штампы — по глоссарию спеки §7.2. */
 export const en: Dict = {
   meta: {
-    title: 'Jegor Dvoinyakov — Frontend Developer',
+    title: 'Egor Dvoinyakov — Frontend Developer',
     description:
-      'Jegor Dvoinyakov — frontend developer: React, TypeScript, three.js. Projects, experience, contacts.',
+      'Egor Dvoinyakov — frontend developer: React, TypeScript, three.js. Projects, experience, contacts.',
   },
   nav: {
     setContents: 'SET CONTENTS',
@@ -31,35 +31,29 @@ export const en: Dict = {
   hero: {
     kicker: 'DRAWING NO. 2026-F1',
     kickerNote: 'SHEET 1 OF 8',
-    nameLines: ['JEGOR', 'DVOINYAKOV'],
+    nameLines: ['EGOR', 'DVOINYAKOV'],
     role: 'FRONTEND DEVELOPER • 20 • NIZHNY NOVGOROD',
-    photoAlt: 'Jegor Dvoinyakov at a work desk, hand on the table',
-    callouts: [
-      'NIZHNY NOVGOROD → 56.3°N',
-      'HAND ON TABLE → WRITES CODE',
-      'H 2047 PX • SCALE 1:1',
-    ],
+    photoAlt: 'Egor Dvoinyakov at a work desk, hand on the table',
+    callouts: ['NIZHNY NOVGOROD → 56.3°N', 'H 2047 PX • SCALE 1:1'],
     stamp: {
       drawn: 'DRAWN',
       drawnBy: 'DVOINYAKOV J.',
       checked: 'CHECKED',
       checkedBy: 'YOU',
       sheet: 'SHEET 1 — SHEETS 8',
-      date: 'DATE — 04.2026',
+      dateLabel: 'DATE',
     },
-    pencil: 'check the scale!',
+    pencil: '',
     contactsAria: 'Contacts on the title sheet',
   },
   about: {
     kicker: 'SHEET 02 / ABOUT',
-    title: 'SPECIFICATION',
+    title: 'EDUCATION',
     ageLabel: 'AGE:',
     age: '20',
-    note1:
-      'I build interfaces that live in the browser: from three.js game logic to React forms. Sometimes the code still throws an error at 3 AM and the error is gone by morning. That part I love.',
-    note2:
-      'Core stack: React and TypeScript; WebGL and Node come in when the task calls for them. In July 2026 I graduated from NRTK, majoring in Information Systems and Programming (secondary vocational). Netology course, prize places at hackathons.',
-    annotate: ['live in the browser', 'gone by morning', 'React and TypeScript'],
+    note:
+      'I specialize in all kinds of interfaces: from three.js game logic to complex corporate systems. Sometimes the code still throws an error at 3 AM and it is gone by morning - for that I love and hate my job. Core and favorite stack: React and TypeScript.',
+    annotate: ['gone by morning', 'React and TypeScript'],
     tableHead: { pos: 'ITEM', name: 'DESCRIPTION', years: 'YEARS' },
     positions: [
       {
@@ -72,11 +66,6 @@ export const en: Dict = {
         name: 'Netology — “Frontend Developer” course',
         years: '2023–2024',
       },
-      {
-        pos: '3',
-        name: 'Hackathons — Agro-ICT (1st), Minin Code (2nd), AtomicHack (5th), Digital Breakthrough',
-        years: '—',
-      },
     ],
     pencil: 'all real',
   },
@@ -84,7 +73,7 @@ export const en: Dict = {
     kicker: 'SHEET 03 / EXPERIENCE',
     title: 'ASSEMBLY RAIL',
     nowMark: 'PRESENT',
-    branchNote: 'the freelance branch split off and merged back',
+    expandAria: 'More about the workplace',
     nodes: [
       {
         period: '05.2024–08.2024',
@@ -181,8 +170,8 @@ export const en: Dict = {
       {
         id: '02',
         name: 'INTELLIGENT-TRAILS',
-        desc: 'Graduation project: a walk planner on Next.js. Yandex geocoder, route building, and algorithms on top of it. The early PHP version is kept as a reminder of where it started.',
-        tags: ['Next.js', 'TypeScript', 'Yandex Geocoder'],
+        desc: 'A college graduation project: a walk planner on Next.js, built on Yandex services, the Overpass API and route-building algorithms.',
+        tags: ['Next.js', 'TypeScript', 'Yandex API', 'Overpass API'],
         demo: 'https://jegors-intelligent-trails.vercel.app',
         repo: 'https://github.com/jegorRegularUser/intelligent-trails',
         screens: ['intelligent-trails', 'intelligent-trails-2'],
@@ -246,11 +235,17 @@ export const en: Dict = {
     kicker: 'SHEET 08 / CHANGE LOG',
     head: { izm: 'REV.', sheets: 'SHEETS', content: 'CONTENT', date: 'DATE' },
     rows: [
-      { izm: '01', sheets: 'all', content: 'blueprint ↔ vellum', date: '2026' },
-      { izm: '02', sheets: 'all', content: 'EN localization', date: '2026' },
+      { izm: '01', sheets: 'all', content: 'first assembly of the set', date: '11.2026' },
+      { izm: '02', sheets: 'all', content: 'acceptance revision: rail, marquees, physics', date: '11.2026' },
     ],
+    dynamic: {
+      theme: 'theme switched',
+      lang: 'localization switched',
+      phone: 'phone row smashed to pieces',
+      button: 'REV. button torn off',
+    },
     note: 'SHEETS 8 • SCALE 1:1',
-    copyright: '© 2026 JEGOR DVOINYAKOV',
+    copyright: '© 2026 EGOR DVOINYAKOV',
   },
   aria: {
     skip: 'Skip to content',

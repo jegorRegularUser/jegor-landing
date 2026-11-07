@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 
 /** Карандашная пометка «от руки» (спека §3.4): лимит 3 на лист — на совести вызова. */
 export function PencilMark({ text, style }: { text: string; style?: CSSProperties }) {
+  if (!text) return null;
   const rotate = -2 + (Math.abs(hash(text)) % 5);
   return (
     <span

@@ -4,6 +4,7 @@
    кусок раскалывается на два, корзина-сенсор съедает куски. */
 
 import type { Engine, Body } from 'matter-js';
+import binSrc from '../assets/bin.png';
 
 export interface Playground {
   /** Превращает DOM-элемент в физическое тело (клон улетает в слой сцены). */
@@ -28,7 +29,9 @@ export async function createPlayground(
   container: HTMLElement,
   hooks: { onImpact?: (piece: HTMLElement, speed: number) => void } = {},
 ): Promise<Playground> {
-  const Matter = await import('matter-js');
+  // matter-js — CJS-пакет: default-interop обязателен, иначе краш (приёмка 15).
+  const mod = await import('matter-js');
+  const Matter = ((mod as unknown as { default?: typeof mod }).default ?? mod) as typeof mod;
   const { Engine, Runner, Bodies, Composite, Mouse, MouseConstraint, Events, Body } = Matter;
 
   const scene = document.createElement('div');
@@ -63,11 +66,20 @@ export async function createPlayground(
   });
   Composite.add(engine.world, mc);
 
+  // Корзина выезжает из-за границы, только когда берут первый кусок (16).
+  let binShown = false;
+  Events.on(mc as never, 'startdrag', () => {
+    if (binShown) return;
+    binShown = true;
+    binRectEl?.classList.add('physics-bin--in');
+  });
+
   const pieces = new Set<Body>();
 
   const sync = () => {
     for (const body of pieces) {
-      const meta = body.plugin.meta as PieceMeta;
+      const meta = body.plugin.meta as PieceMeta | undefined;
+      if (!meta || !meta.el) continue;
       meta.el.style.transform = `translate(${body.position.x - meta.el.offsetWidth / 2}px, ${
         body.position.y - meta.el.offsetHeight / 2
       }px) rotate(${body.angle}rad)`;
@@ -187,17 +199,20 @@ export async function createPlayground(
     },
     setBin(onEnter) {
       if (binRectEl) binRectEl.remove();
-      const w = 120;
-      const h = 80;
-      const x = 30;
-      const y = H() - h - 24;
+      const w = 130;
+      const h = 110;
+      const x = -36; // высунута из-за левого края страницы (16)
+      const y = H() - h - 16;
       binRectEl = document.createElement('div');
       binRectEl.className = 'physics-bin';
-      binRectEl.textContent = '▣';
+      const img = document.createElement('img');
+      img.src = binSrc;
+      img.alt = '';
+      binRectEl.appendChild(img);
       binRectEl.style.left = `${x}px`;
       binRectEl.style.top = `${y}px`;
       scene.appendChild(binRectEl);
-      bin = Bodies.rectangle(x + w / 2, y + h / 2, w, h, {
+      bin = Bodies.rectangle(x + w / 2 + 10, y + h / 2, w - 20, h - 20, {
         isStatic: true,
         isSensor: true,
         plugin: { bin: true },

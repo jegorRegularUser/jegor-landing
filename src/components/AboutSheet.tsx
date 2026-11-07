@@ -6,14 +6,18 @@ import { useLang } from '../i18n/LangContext';
 import { Sheet } from './Sheet';
 import { PencilMark } from './PencilMark';
 
-/** ЛИСТ 02 — Обо мне («Спецификация»): примечания + таблица позиций (§4.2). */
+/** ЛИСТ 02 — Образование (ревизия 02): один текст, таблица без хакатонов. */
 export function AboutSheet() {
   const { t } = useLang();
   const ageRef = useRough<HTMLElement>('circle', 60, () => ({ padding: 6 }));
   const phraseRefs = useRef<(HTMLElement | null)[]>([]);
   const groupRef = useNotationGroup(
     phraseRefs,
-    t.about.annotate.map(() => ({ type: 'underline' as const, strokeWidth: 2, animationDuration: 0 })),
+    t.about.annotate.map(() => ({
+      type: 'underline' as const,
+      strokeWidth: 2,
+      animationDuration: 0,
+    })),
     [t],
   );
 
@@ -30,13 +34,38 @@ export function AboutSheet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
-  const phrases = splitByPhrases(t.about.note1, t.about.note2, t.about.annotate);
+  /** Разбивка текста на части: помеченные фразы получают rough-notation. */
+  const parts: { text: string; annotated?: boolean }[] = [];
+  {
+    let rest = t.about.note;
+    for (const phrase of t.about.annotate) {
+      const idx = rest.indexOf(phrase);
+      if (idx === -1) continue;
+      if (rest.slice(0, idx)) parts.push({ text: rest.slice(0, idx) });
+      parts.push({ text: phrase, annotated: true });
+      rest = rest.slice(idx + phrase.length);
+    }
+    if (rest) parts.push({ text: rest });
+  }
 
   return (
-    <Sheet id="sheet-02" titleId="sheet-02-title" kicker={t.about.kicker} title={t.about.title} dense={false}>
+    <Sheet
+      id="sheet-02"
+      titleId="sheet-02-title"
+      kicker={t.about.kicker}
+      title={t.about.title}
+      titleExtra={
+        <span className="about__age">
+          {t.about.ageLabel}{' '}
+          <b ref={ageRef as React.RefObject<HTMLElement>} style={{ padding: '2px 10px' }}>
+            {t.about.age}
+          </b>
+        </span>
+      }
+    >
       <div className="about">
-        <div>
-          {phrases.map((part, i) =>
+        <div className="about__note">
+          {parts.map((part, i) =>
             part.annotated ? (
               <em
                 key={i}
@@ -51,15 +80,8 @@ export function AboutSheet() {
               <span key={i}>{part.text}</span>
             ),
           )}
-          <PencilMark text={t.about.pencil} style={{ top: '6px', right: '4%' }} />
         </div>
         <div>
-          <p className="about__age">
-            {t.about.ageLabel}{' '}
-            <b ref={ageRef as React.RefObject<HTMLElement>} style={{ padding: '2px 10px' }}>
-              {t.about.age}
-            </b>
-          </p>
           <table className="pos-table">
             <thead>
               <tr>
@@ -80,34 +102,7 @@ export function AboutSheet() {
           </table>
         </div>
       </div>
+      <PencilMark text={t.about.pencil} style={{ bottom: '6px', right: '4%' }} />
     </Sheet>
   );
-}
-
-interface Part {
-  text: string;
-  annotated?: boolean;
-}
-
-/** Разбивка примечаний на части: помеченные фразы получают rough-notation. */
-function splitByPhrases(note1: string, note2: string, phrases: string[]): Part[] {
-  const parts: Part[] = [];
-  const push = (text: string, annotated: boolean) => {
-    if (text) parts.push({ text, annotated });
-  };
-  const consume = (note: string) => {
-    let rest = note;
-    for (const phrase of phrases) {
-      const idx = rest.indexOf(phrase);
-      if (idx === -1) continue;
-      push(rest.slice(0, idx), false);
-      push(phrase, true);
-      rest = rest.slice(idx + phrase.length);
-    }
-    push(rest, false);
-  };
-  consume(note1);
-  push(' ', false);
-  consume(note2);
-  return parts;
 }

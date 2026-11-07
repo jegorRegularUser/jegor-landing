@@ -10,6 +10,7 @@ import type { ShaderQuad } from '../shader/quad';
 import { useLang } from '../i18n/LangContext';
 import { useTheme } from '../theme/ThemeProvider';
 import { useReducedMotion } from '../hooks/useMedia';
+import { changeToday } from '../state/ChangeLog';
 import { Sheet } from './Sheet';
 import { PencilMark } from './PencilMark';
 
@@ -89,11 +90,11 @@ function OscilloscopeWindow() {
   );
 }
 
-/** Светлая тема: фейковая ошибка React — градиент «не загрузился» (забавка 8.1). */
+/** Светлая тема: фейковая ошибка React + штриховка, продолжающаяся ниже (9). */
 function ErrorCard() {
   const ref = useRough<HTMLDivElement>('hachure-fill', 610, () => ({
     fillStyle: 'hachure',
-    hachureGap: 9,
+    hachureGap: 27, // втрое реже, чем было (9)
   }));
   return (
     <div className="err-card" ref={ref} aria-hidden="true">
@@ -106,10 +107,24 @@ function ErrorCard() {
     at renderWithHooks (react-dom.development.js:15486)
     at mountIndeterminateComponent (react-dom.development.js:20074)
     at beginWork (react-dom.development.js:26156)`}</pre>
-      <pre className="err-card__comment">{`// TODO: не забыть починить фон портрета на белой теме
-// шутка. на светлом фоне вместо осциллографа — чертёж`}</pre>
+      <pre className="err-card__comment">{`// TODO: не забыть починить фон портрета на белой теме`}</pre>
     </div>
   );
+}
+
+/** Штриховка на всю высоту фигуры в светлой теме — за портретом. */
+function LightHatch() {
+  const ref = useRough<HTMLDivElement>('hachure-fill', 611, () => ({
+    fillStyle: 'hachure',
+    hachureGap: 27,
+  }));
+  return <div className="light-hatch" ref={ref} aria-hidden="true" />;
+}
+
+/** Рисованная стрелка выноски (3): rough-оверлей вместо голого svg. */
+function CalloutArrow({ seed, flip, vertical }: { seed: number; flip?: boolean; vertical?: boolean }) {
+  const ref = useRough<HTMLSpanElement>('arrow', seed, () => ({ flip, padding: 2, roughness: 1.2 }));
+  return <span className={`callout-arrow${vertical ? ' callout-arrow--v' : ''}`} ref={ref} aria-hidden="true" />;
 }
 
 export function HeroSheet() {
@@ -126,8 +141,10 @@ export function HeroSheet() {
   const silhouetteRef = useRough<HTMLDivElement>(
     'silhouette',
     42,
-    () => ({ d: silhouette.levels['0.004'].path, targetEl: portraitRef.current?.querySelector('img') ?? null }),
-     
+    () => ({
+      d: silhouette.levels['0.004'].path,
+      targetEl: portraitRef.current?.querySelector('img') ?? null,
+    }),
     [],
   );
 
@@ -154,27 +171,25 @@ export function HeroSheet() {
         split = new SplitText(name, { type: 'chars' });
         tl.from(split.chars, { yPercent: 110, autoAlpha: 0, stagger: 0.03, duration: 0.5 }, 0);
       }
-        tl.call(
-          () => {
-            const a = annotate(name, { type: 'underline', animationDuration: 600 });
-            annoRef.current = a;
-            a.show();
-          },
-          undefined,
-          0.2,
-        );
-        tl.fromTo(
-          root.querySelector('.hero__portrait-wrap'),
-          { autoAlpha: 0, scale: 0.97 },
-          { autoAlpha: 1, scale: 1, duration: 0.7, ease: 'power2.out' },
-          0.25,
-        );
-        // Выноски: fade + DrawSVG по чистым SVG (карантин соблюдён, §4.0).
-        tl.from('.callout', { autoAlpha: 0, stagger: 0.08, duration: 0.3 }, 0.5);
-        tl.from('.callout svg path', { drawSVG: 0, duration: 0.5, stagger: 0.08 }, 0.5);
-        tl.from('.hero__role', { autoAlpha: 0, y: 12, duration: 0.4 }, 0.4);
-        tl.from('.title-block', { autoAlpha: 0, duration: 0.4 }, 0.8);
-        tl.play();
+      tl.call(
+        () => {
+          const a = annotate(name, { type: 'underline', animationDuration: 600 });
+          annoRef.current = a;
+          a.show();
+        },
+        undefined,
+        0.2,
+      );
+      tl.fromTo(
+        root.querySelector('.hero__portrait-wrap'),
+        { autoAlpha: 0, scale: 0.97 },
+        { autoAlpha: 1, scale: 1, duration: 0.7, ease: 'power2.out' },
+        0.25,
+      );
+      tl.from('.callout', { autoAlpha: 0, stagger: 0.08, duration: 0.3 }, 0.5);
+      tl.from('.hero__role', { autoAlpha: 0, y: 12, duration: 0.4 }, 0.4);
+      tl.from('.title-block', { autoAlpha: 0, duration: 0.4 }, 0.8);
+      tl.play();
     });
 
     return () => {
@@ -184,7 +199,7 @@ export function HeroSheet() {
     };
   }, [reduced, t]);
 
-  const [c1, c2, c3] = t.hero.callouts;
+  const [c1, c2] = t.hero.callouts;
 
   return (
     <Sheet id="sheet-01" titleId="sheet-01-title" hero kicker={`${t.hero.kicker} • ${t.hero.kickerNote}`}>
@@ -199,7 +214,7 @@ export function HeroSheet() {
         </div>
 
         <div className="hero__figure">
-          {theme === 'dark' ? <OscilloscopeWindow /> : <ErrorCard />}
+          {theme === 'dark' ? <OscilloscopeWindow /> : <LightHatch />}
 
           <div className="hero__portrait-wrap" ref={portraitRef}>
             <div ref={silhouetteRef} style={{ position: 'relative' }}>
@@ -219,23 +234,15 @@ export function HeroSheet() {
             </div>
           </div>
 
-          <span className="callout callout--city" style={{ left: '2%', top: '0%' }} aria-hidden="true">
-            <svg width="52" height="14" viewBox="0 0 52 14">
-              <path d="M0 7 H46 M42 2 L48 7 L42 12" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            </svg>
+          {theme === 'light' && <ErrorCard />}
+
+          <span className="callout callout--city" style={{ right: '2%', top: '0%' }} aria-hidden="true">
+            <CalloutArrow seed={640} flip />
             {c1}
           </span>
-          <span className="callout callout--hand" style={{ right: '2%', top: '60%' }} aria-hidden="true">
+          <span className="callout callout--scale" style={{ left: '30%', bottom: '-46px' }} aria-hidden="true">
+            <CalloutArrow seed={641} vertical />
             {c2}
-            <svg width="52" height="14" viewBox="0 0 52 14">
-              <path d="M52 7 H6 M10 2 L4 7 L10 12" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            </svg>
-          </span>
-          <span className="callout callout--scale" style={{ left: '0%', bottom: '8%' }} aria-hidden="true">
-            <svg width="14" height="52" viewBox="0 0 14 52">
-              <path d="M7 0 V46 M2 42 L7 48 L12 42" fill="none" stroke="currentColor" strokeWidth="1.2" />
-            </svg>
-            {c3}
           </span>
 
           <div className="title-block" ref={titleBlockRef}>
@@ -243,15 +250,17 @@ export function HeroSheet() {
               <tbody>
                 <tr>
                   <td>{t.hero.stamp.drawn}</td>
-                  <td>{t.hero.stamp.drawnBy}</td>
+                  <td className="hand">{t.hero.stamp.drawnBy}</td>
                 </tr>
                 <tr>
                   <td>{t.hero.stamp.checked}</td>
-                  <td>{t.hero.stamp.checkedBy}</td>
+                  <td className="hand">{t.hero.stamp.checkedBy}</td>
                 </tr>
                 <tr>
                   <td>{t.hero.stamp.sheet}</td>
-                  <td>{t.hero.stamp.date}</td>
+                  <td className="hand">
+                    {t.hero.stamp.dateLabel} — {changeToday()}
+                  </td>
                 </tr>
               </tbody>
             </table>

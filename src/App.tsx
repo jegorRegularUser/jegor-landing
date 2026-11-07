@@ -1,5 +1,6 @@
 import { useLayoutEffect } from 'react';
 import { LangProvider, useLang } from './i18n/LangContext';
+import { ChangeLogProvider } from './state/ChangeLog';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { SheetsObserverProvider } from './hooks/useSheetsObserver';
 import { ScrollTrigger } from './lib/gsap';
@@ -83,11 +84,13 @@ function Site() {
 export default function App() {
   return (
     <LangProvider>
-      <ThemeProvider>
-        <SheetsObserverProvider>
-          <Site />
-        </SheetsObserverProvider>
-      </ThemeProvider>
+      <ChangeLogProvider>
+        <ThemeProvider>
+          <SheetsObserverProvider>
+            <Site />
+          </SheetsObserverProvider>
+        </ThemeProvider>
+      </ChangeLogProvider>
     </LangProvider>
   );
 }

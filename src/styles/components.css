@@ -1183,6 +1183,7 @@
   inset: 0;
   z-index: 95;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .physics-piece {
@@ -1197,6 +1198,7 @@
   font-family: var(--font-mono);
   font-size: 14px;
   white-space: nowrap;
+  pointer-events: auto;
 }
 
 .physics-bin {
@@ -1404,4 +1406,276 @@
   .set-contents a {
     padding: 6px 6px;
   }
+}
+
+/* ==== РЕВИЗИЯ 02 ==== */
+
+/* --- ось: сцена линий и карточки --- */
+.rail__lines {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 300;
+}
+
+.rail__line {
+  position: absolute;
+  inset: 0;
+}
+
+.rail__line .rough-overlay {
+  overflow: visible;
+}
+
+.rail__now {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.rail__now--main {
+  right: 2px;
+  top: 37%;
+}
+
+.rail__now--cemp {
+  right: 2px;
+  top: 10%;
+}
+
+.rail .exp-node {
+  position: absolute;
+}
+
+.exp-node__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  width: 100%;
+}
+
+.exp-node__org {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.exp-node--open {
+  z-index: 6;
+  width: min(430px, 92%) !important;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+  box-shadow: 0 10px 40px rgba(10, 30, 51, 0.35);
+}
+
+.exp-node__body {
+  margin-top: 10px;
+}
+
+@media (max-width: 899px) {
+  .rail__lines {
+    display: none;
+  }
+  .rail .exp-node {
+    position: static !important;
+    width: 100% !important;
+  }
+  .rail .exp-node--open {
+    width: 100% !important;
+  }
+}
+
+/* --- марки: рамки одним оверлеем на ряд --- */
+.tech-marquee__row {
+  position: relative;
+}
+
+/* --- карусели проектов --- */
+.proj-carousel {
+  background: var(--bg);
+}
+
+.proj-arrow {
+  position: absolute;
+  top: 42%;
+  width: 56px;
+  height: 40px;
+  z-index: 3;
+  color: transparent;
+  font-size: 0;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+}
+
+.proj-arrow:disabled {
+  opacity: 0.25;
+}
+
+.proj-arrow--prev {
+  left: 10px;
+}
+
+.proj-arrow--next {
+  right: 10px;
+}
+
+.proj-carousel__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 10px 2px 2px;
+  cursor: pointer;
+}
+
+.proj-carousel__num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.proj-progress {
+  flex: 1;
+  height: 6px;
+}
+
+.proj-block__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.proj-block__name b {
+  color: var(--accent);
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+.proj-block__soon {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.proj-card__tags li {
+  color: var(--ink);
+  border: 1px solid var(--hairline);
+  font-size: 14px;
+}
+
+.proj-card__links {
+  font-size: 16px;
+}
+
+.proj-card__links .dim-link {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+/* --- контакты --- */
+.stamp-grid__action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.stamp-grid__stamp-empty {
+  min-width: 40px;
+}
+
+.copy-stamp {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  translate: 0 -50%;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  pointer-events: none;
+}
+
+.approved-wrap {
+  text-align: center;
+  margin-top: -18px;
+  position: relative;
+  z-index: 2;
+}
+
+.approved-stamp {
+  padding: 16px 36px;
+}
+
+.title-block td.hand {
+  font-family: var(--font-hand);
+  font-size: 15px;
+  letter-spacing: 0.03em;
+}
+
+/* --- светлый фон фигуры: штриховка за портретом --- */
+.light-hatch {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* --- выноски: rough-стрелки --- */
+.callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.callout--scale {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.callout-arrow {
+  display: inline-block;
+  width: 44px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
+.callout-arrow--v {
+  transform: rotate(90deg);
+  transform-origin: center;
+  margin-bottom: 4px;
+}
+
+/* --- корзина из фото, выезжает при захвате куска --- */
+.physics-bin {
+  width: 130px;
+  height: 110px;
+  border: 0;
+  background: none;
+  transform: translateX(-110%);
+  transition: transform 0.35s ease-out;
+}
+
+.physics-bin--in {
+  transform: translateX(0);
+}
+
+.physics-bin img {
+  width: 100%;
+  height: auto;
+  filter: saturate(0.85) drop-shadow(0 6px 14px rgba(10, 30, 51, 0.4));
 }

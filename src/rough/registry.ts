@@ -7,7 +7,9 @@ export type RoughKind =
   | 'circle'
   | 'arrow'
   | 'silhouette'
-  | 'hachure-fill';
+  | 'hachure-fill'
+  | 'path'
+  | 'multi-frame';
 
 export type ColorKey = 'ink' | 'muted' | 'accent' | 'accent2';
 
@@ -27,6 +29,10 @@ export interface RoughOpts {
   hachureAngle?: number;
   /** Стрелка влево (зеркало). */
   flip?: boolean;
+  /** Для path: шкала координат по ширине (k = width / scaleW). */
+  scaleW?: number;
+  /** Для multi-frame: элементы, вокруг которых рисуются рамки. */
+  targets?: Element[];
 }
 
 interface Entry {
@@ -64,6 +70,8 @@ const KIND_DEFAULTS: Record<RoughKind, { roughness: number; strokeWidth: number 
   circle: { roughness: 1.6, strokeWidth: 1.5 },
   arrow: { roughness: 1.5, strokeWidth: 1.5 },
   'hachure-fill': { roughness: 1.8, strokeWidth: 0 },
+  path: { roughness: 1.6, strokeWidth: 2.5 },
+  'multi-frame': { roughness: 1.4, strokeWidth: 1.5 },
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -193,6 +201,39 @@ function drawEntry(entry: Entry): void {
         }),
       );
       if (opts.flip) svg.style.transform = 'scaleX(-1)';
+      break;
+    }
+    case 'path': {
+      // Произвольный путь (гит-линии оси): координаты в шкале scaleW
+      // (по умолчанию 1000), равномерно масштабируются в ширину маунта.
+      if (!opts.d) break;
+      const k = (opts.scaleW ?? 1000) > 0 ? mountRect.width / (opts.scaleW ?? 1000) : 1;
+      const g = document.createElementNS(SVG_NS, 'g');
+      g.setAttribute('transform', `scale(${k})`);
+      const drawable = rc.path(opts.d, {
+        seed,
+        roughness: opts.roughness ?? defaults.roughness,
+        strokeWidth: (opts.strokeWidth ?? defaults.strokeWidth) / k,
+        stroke: color,
+      });
+      g.appendChild(drawable);
+      svg.appendChild(g);
+      break;
+    }
+    case 'multi-frame': {
+      // Много рамок одним оверлеем (лента чипов): дешево по DOM.
+      for (const t of opts.targets ?? []) {
+        const r = t.getBoundingClientRect();
+        const tx = unrotate(r.left - mountRect.left, r.top - mountRect.top, mount);
+        append(
+          rc.rectangle(tx[0] - 4, tx[1] - 4, r.width + 8, r.height + 8, {
+            seed: seed + ((opts.targets ?? []).indexOf(t) % 7),
+            roughness: opts.roughness ?? defaults.roughness,
+            stroke: color,
+            strokeWidth: opts.strokeWidth ?? defaults.strokeWidth,
+          }),
+        );
+      }
       break;
     }
     case 'hachure-fill': {

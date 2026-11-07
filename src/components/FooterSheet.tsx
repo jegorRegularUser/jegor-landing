@@ -1,10 +1,13 @@
 import { useLayoutEffect, useRef } from 'react';
 import { useLang } from '../i18n/LangContext';
+import { useChangeLog } from '../state/ChangeLog';
 import { sheetReveal } from '../lib/motion';
 
-/** ЛИСТ 08 — Регистрация изменений (футер, §4.8): без анимаций кроме ревила. */
+/** ЛИСТ 08 — Регистрация изменений (13): статичные строки + живые
+ *  события (смена темы/языка, разборка телефона, отрыв кнопки). */
 export function FooterSheet() {
   const { t } = useLang();
+  const { entries } = useChangeLog();
   const ref = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
@@ -34,6 +37,14 @@ export function FooterSheet() {
                 <td>{r.sheets}</td>
                 <td>{r.content}</td>
                 <td>{r.date}</td>
+              </tr>
+            ))}
+            {entries.map((e, i) => (
+              <tr key={`${e.content}-${i}`} className="footer-sheet__live">
+                <td>{String(t.footer.rows.length + 1 + i).padStart(2, '0')}</td>
+                <td>{t.footer.head.sheets.toLowerCase()}</td>
+                <td>{e.content}</td>
+                <td>{e.date}</td>
               </tr>
             ))}
           </tbody>
