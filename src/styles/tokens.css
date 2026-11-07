@@ -1,0 +1,37 @@
+/* Токены тем. Единственный источник цветов — CSS-переменные; rough читает их
+   через getComputedStyle в момент рисования (спека §6.4). */
+
+:root {
+  --font-display: Oswald, 'Arial Narrow', sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-hand: Neucha, 'Comic Sans MS', cursive;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a1e33;
+  --surface: #10293f;
+  --ink: #ddebf7;
+  --muted: #8aa9c4;
+  --accent: #ff7a2f;
+  --accent2: #56c8e8;
+  --accent-dim: #b85c2a;
+  --grid-minor: rgba(221, 235, 247, 0.04);
+  --grid-major: rgba(221, 235, 247, 0.05);
+  --hairline: rgba(221, 235, 247, 0.35);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4efe2;
+  --surface: #fbf7ec;
+  --ink: #182a3c;
+  --muted: #526881;
+  --accent: #bc3a10;
+  --accent2: #1d6fa5;
+  --accent-dim: #9c4a1c;
+  --grid-minor: rgba(24, 42, 60, 0.04);
+  --grid-major: rgba(24, 42, 60, 0.05);
+  --hairline: rgba(24, 42, 60, 0.35);
+}

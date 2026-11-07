@@ -1,0 +1,252 @@
+/**
+ * RU-словарь — source of truth (спека §7.1). en.ts типизируется typeof ru.
+ * Ключи с пометкой TODO(owner) — данные, которых нет в брифе: не заполнять
+ * выдумкой, закрыть перед деплоем (спека §7.4).
+ */
+export const ru = {
+  meta: {
+    title: 'Егор Двойняков — Frontend-разработчик',
+    description:
+      'Егор Двойняков — frontend-разработчик: React, TypeScript, three.js. Проекты, опыт, контакты.',
+  },
+  nav: {
+    setContents: 'СОСТАВ КОМПЛЕКТА',
+    cadOn: 'Выключить CAD-курсор',
+    cadOff: 'Включить CAD-курсор',
+    theme: 'ИЗМ. 01',
+    themeAria: 'Сменить тему (синька ↔ ватман)',
+    lang: 'EN',
+    langAria: 'Switch to English',
+    sheets: [
+      { id: 'sheet-01', label: '01 ТИТУЛ' },
+      { id: 'sheet-02', label: '02 СПЕЦИФИКАЦИЯ' },
+      { id: 'sheet-03', label: '03 ОПЫТ' },
+      { id: 'sheet-04', label: '04 ТЕХНОЛОГИИ' },
+      { id: 'sheet-05', label: '05 ПРОЕКТЫ' },
+      { id: 'sheet-06', label: '06 ДИПЛОМЫ' },
+      { id: 'sheet-07', label: '07 КОНТАКТЫ' },
+    ],
+  },
+  hero: {
+    kicker: 'ЧЕРТЁЖ № 2026-Ф1',
+    kickerNote: 'ЭКЗ. ЕДИНСТВ.',
+    nameLines: ['ЕГОР', 'ДВОЙНЯКОВ'],
+    role: 'FRONTEND-РАЗРАБОТЧИК • 20 ЛЕТ • НИЖНИЙ НОВГОРОД',
+    photoAlt: 'Егор Двойняков за рабочим столом, рука на столе',
+    callouts: [
+      'Г. НИЖНИЙ НОВГОРОД → 56.3°N',
+      'РУКА НА СТОЛЕ → ПИШЕТ КОД',
+      'H 2047 PX • МАСШТАБ 1:1',
+    ],
+    stamp: {
+      drawn: 'РАЗРАБ.',
+      drawnBy: 'ДВОЙНЯКОВ Е.',
+      checked: 'ПРОВ.',
+      checkedBy: 'ВЫ',
+      sheet: 'ЛИСТ 1 — ЛИСТОВ 8',
+      date: 'ДАТА — 04.2026',
+    },
+    pencil: 'проверить масштаб!',
+    contactsAria: 'Контакты в шапке листа',
+  },
+  about: {
+    kicker: 'ЛИСТ 02 / ОБО МНЕ',
+    title: 'СПЕЦИФИКАЦИЯ',
+    ageLabel: 'ВОЗРАСТ:',
+    age: '20',
+    note1:
+      'Собираю интерфейсы, которые живут в браузере: от игровой логики на three.js до форм на React. Люблю момент, когда сложное становится простым на экране — и не разваливается на пятом клике.',
+    note2:
+      'Основной стек — React/TypeScript; рядом — WebGL и Node. Учусь в НРТК, закончил курс Нетологии, выступал на хакатонах с призовыми местами.',
+    annotate: ['живут в браузере', 'не разваливается', 'React/TypeScript'],
+    positions: [
+      {
+        pos: '1',
+        name: 'НРТК, г. Нижний Новгород — «Информационные системы и программирование»',
+        years: '2022–2026',
+      },
+      {
+        pos: '2',
+        name: 'Нетология — курс «Frontend-разработчик»',
+        years: '2023–2024',
+      },
+      {
+        // TODO(owner): перечень хакатонов и конкретные места
+        pos: '3',
+        name: 'Хакатоны — призовые места',
+        years: '—',
+      },
+    ],
+    pencil: 'всё настоящее',
+  },
+  experience: {
+    kicker: 'ЛИСТ 03 / ОПЫТ',
+    title: 'МОНТАЖНАЯ ОСЬ',
+    nowMark: 'Н.В.',
+    freelanceRail: 'ПАРАЛЛЕЛЬНАЯ ШИНА — ФРИЛАНС',
+    nodes: [
+      {
+        period: '05.2024–08.2024',
+        org: 'СТАЖИРОВКА', // TODO(owner): название компании стажировки
+        points: [
+          'Vue.js: новые страницы и компоненты',
+          'Новая логика для сайтов, улучшение UI',
+        ],
+      },
+      {
+        period: '08.2024–04.2026',
+        org: 'КОРСОФТ',
+        points: [
+          'Сайты-лендинги компании с дочерними страницами',
+          'Образовательная веб-система на базе Moodle, кастомные модули',
+          'Angular: система мониторинга роботов-уборщиков Pixel',
+          'Работа с шаблоном Apache Superset',
+        ],
+      },
+      {
+        period: '04.2025–10.2025',
+        org: 'ФРИЛАНС',
+        points: [
+          'Образовательный сайт для подготовки к ЕГЭ — GetEge',
+          'Web view для телеграм-бота Ways: 2d-движок pixi.js',
+          'Система детерминизма и сидов',
+          'Оптимизация и поддержка существующих систем',
+        ],
+      },
+      {
+        period: '04.2026–н.в.',
+        org: 'ЦЭМП МОСКВЫ',
+        points: [
+          'Веб-система контроля и управления по ТЗ работодателя',
+          'Продумывание и внедрение UI/UX-дизайна',
+          'Аналитика существующих решений',
+        ],
+      },
+    ],
+    pencil: 'тут вырос',
+  },
+  tech: {
+    kicker: 'ЛИСТ 04 / ТЕХНОЛОГИИ',
+    title: 'СПЕЦИФИКАЦИЯ ЭЛЕМЕНТОВ',
+    zones: { fe: 'FE', be: 'BE', tools: 'TOOLS' },
+    chips: [
+      'React',
+      'TypeScript',
+      'JavaScript',
+      'HTML5/CSS3',
+      'SCSS',
+      'Tailwind',
+      'Vue',
+      'Angular',
+      'Next.js',
+      'three.js/WebGL',
+      'Node/Express',
+      'FastAPI',
+      'Python',
+      'PostgreSQL',
+      'Git',
+      'Vite',
+    ],
+    pencil: 'TS — любимое',
+  },
+  projects: {
+    kicker: 'ЛИСТ 05 / ПРОЕКТЫ',
+    title: 'ВЕДОМОСТЬ ПРОЕКТОВ',
+    unit: 'ИЗД.',
+    demo: 'ДЕМО',
+    repo: 'РЕПО',
+    prev: 'Предыдущий проект',
+    next: 'Следующий проект',
+    counterAria: 'Номер проекта',
+    wipStamp: 'В РАЗРАБОТКЕ',
+    slotNote: 'СКРИНЫ — ПОЗЖЕ',
+    pencil: 'вживую лучше →',
+    items: [
+      {
+        id: '01',
+        name: 'EVOLUTION-ONLINE',
+        desc: 'Браузерная игра-эволюция: React + TypeScript, three.js/cannon-es, WebGL-мир, pglite-персистентность, auth, протестированный движок.',
+        tags: ['React', 'TypeScript', 'three.js', 'cannon-es'],
+        demo: 'https://evolution-online.vercel.app',
+        repo: 'https://github.com/jegorRegularUser/evolution-online',
+        screen: 'evolution-online',
+        status: 'ready' as const,
+      },
+      {
+        id: '02',
+        name: 'INTELLIGENT-TRAILS',
+        desc: 'Дипломный проект: планировщик прогулок на Next.js с Яндекс Геокодером, построение маршрутов и алгоритмы.',
+        tags: ['Next.js', 'TypeScript', 'Яндекс API'],
+        demo: 'https://jegors-intelligent-trails.vercel.app',
+        repo: 'https://github.com/jegorRegularUser/intelligent-trails',
+        screen: 'intelligent-trails',
+        status: 'ready' as const,
+      },
+      {
+        id: '03',
+        name: 'BORROWED VESSELS',
+        desc: 'Кард-батл на Godot: ты — голос в голове героя, а не сам герой. Каждое сопротивление карты — решение: заставить, уговорить или отступить.',
+        tags: ['Godot', 'GDScript', 'card-battle'],
+        demo: 'https://jegorregularuser.itch.io/borrowed-vessels',
+        repo: '',
+        screen: '',
+        status: 'wip' as const,
+      },
+    ],
+  },
+  diplomas: {
+    kicker: 'ЛИСТ 06 / ДИПЛОМЫ',
+    title: 'ПРИЛОЖЕНИЕ А',
+    doc: 'ДОК.',
+    close: 'ЗАКРЫТЬ',
+    lightboxAria: 'Просмотр документа',
+    pencil: '11 шт., всё настоящее',
+    items: [
+      { file: 'atomic', caption: 'Atomic' },
+      { file: 'digit', caption: 'Digit' },
+      { file: 'mezhdunarodnyy-apk', caption: 'Международный АПК' },
+      { file: 'mininser', caption: 'Минин — сертификат' },
+      { file: 'minindipl', caption: 'Минин — диплом' },
+      { file: 'bjs', caption: 'BJS' },
+      { file: 'netology-basic-js', caption: 'Нетология — Basic JavaScript' },
+      { file: 'netology-html', caption: 'Нетология — HTML' },
+      { file: 'netology-mobile', caption: 'Нетология — Mobile' },
+      { file: 'graf', caption: 'Graf' },
+      { file: 'mobile', caption: 'Mobile' },
+    ],
+  },
+  contacts: {
+    kicker: 'ЛИСТ 07 / КОНТАКТЫ',
+    title: 'ОСНОВНАЯ НАДПИСЬ',
+    telegram: { label: 'TELEGRAM', value: '@panteloma', href: 'https://t.me/panteloma' },
+    email: {
+      label: 'EMAIL',
+      value: 'dvoinyakovegor00@gmail.com',
+      href: 'mailto:dvoinyakovegor00@gmail.com',
+    },
+    github: { label: 'GITHUB', value: 'jegorRegularUser', href: 'https://github.com/jegorRegularUser' },
+    phoneNote: 'ТЕЛЕФОН — НЕ ПУБЛИКУЕТСЯ',
+    copy: 'КОПИРОВАТЬ',
+    copied: 'СКОПИРОВАНО',
+    copiedAria: 'Адрес скопирован',
+    approved: 'УТВЕРЖДЕНО К СБОРКЕ',
+    pencil: 'напиши — отвечу',
+  },
+  footer: {
+    kicker: 'ЛИСТ 08 / РЕГИСТРАЦИЯ ИЗМЕНЕНИЙ',
+    head: { izm: 'ИЗМ.', sheets: 'ЛИСТЫ', content: 'СОДЕРЖАНИЕ', date: 'ДАТА' },
+    rows: [
+      { izm: '01', sheets: 'все', content: 'синька ↔ ватман', date: '2026' },
+      { izm: '02', sheets: 'все', content: 'локализация EN', date: '2026' },
+    ],
+    note: 'ЛИСТОВ 8 • МАСШТАБ 1:1',
+    copyright: '© 2026 ЕГОР ДВОЙНЯКОВ',
+  },
+  aria: {
+    skip: 'К содержимому',
+    region: 'Комплект чертежей',
+    main: 'Основное содержимое',
+  },
+};
+
+export type Dict = typeof ru;

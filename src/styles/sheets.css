@@ -1,0 +1,130 @@
+/* Листы: двойная рамка по мотивам ГОСТ 2.104, миллиметровка, шапка листа (спека §4.0). */
+
+.sheet {
+  position: relative;
+  max-width: 1200px;
+  margin: 48px auto;
+  padding: 8px;
+  border: 1px solid var(--hairline);
+  transition: border-color 0.3s;
+}
+
+.sheet__paper {
+  position: relative;
+  border: 1.5px solid var(--ink);
+  padding: clamp(20px, 4vw, 48px);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+  overflow: hidden;
+}
+
+/* Засечки-риски по кромкам, координатные метки — только ≥768px (спека §4.0). */
+.sheet__paper::before,
+.sheet__paper::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.sheet__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .sheet__marks {
+    display: block;
+  }
+}
+
+.sheet__marks .col-label {
+  position: absolute;
+  top: 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  transform: translateX(-50%);
+}
+
+.sheet__marks .row-label {
+  position: absolute;
+  left: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  transform: translateY(-50%);
+}
+
+.sheet__kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.sheet__kicker-label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.sheet__kicker-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+  align-self: center;
+}
+
+.sheet__title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.15;
+  margin-bottom: clamp(16px, 3vw, 32px);
+}
+
+/* Hero — утолщённая левая кромка (спека §4.1). */
+.sheet--hero {
+  margin-top: 0;
+}
+
+.sheet--hero .sheet__paper {
+  border-left-width: 4px;
+}
+
+@media (max-width: 479px) {
+  .sheet {
+    margin: 24px 8px;
+  }
+  .sheet__paper {
+    border-width: 1px;
+  }
+  .sheet__paper {
+    background-image:
+      linear-gradient(var(--grid-minor) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+    background-size: 8px 8px, 8px 8px;
+  }
+}
+
+/* Карандашные пометки (спека §3.4). */
+.pencil-mark {
+  position: absolute;
+  font-family: var(--font-hand);
+  font-size: 20px;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
