@@ -1012,7 +1012,7 @@
 /* --- фейковая ошибка React на светлой теме (забавка 8.1) --- */
 .err-card {
   position: absolute;
-  z-index: 0;
+  z-index: 2;
   width: 86%;
   left: 8%;
   top: 4%;
@@ -1678,4 +1678,143 @@
   width: 100%;
   height: auto;
   filter: saturate(0.85) drop-shadow(0 6px 14px rgba(10, 30, 51, 0.4));
+}
+
+/* ==== РЕВИЗИЯ 03: по скриншотам ==== */
+
+/* --- ось: одна система координат (бокс 1000×240) --- */
+.rail {
+  min-height: 0;
+}
+
+.rail__lines {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1000 / 240;
+}
+
+.rail__line {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.rail__now {
+  position: absolute;
+  z-index: 1;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.rail__now--main {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.rail__now--cemp {
+  right: 0;
+  top: 16.7%;
+  transform: translateY(-50%);
+}
+
+.rail .exp-node {
+  position: absolute;
+  z-index: 2;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+  min-width: 150px;
+}
+
+.exp-node__head {
+  cursor: pointer;
+}
+
+.exp-node__org {
+  max-width: 175px;
+}
+
+.exp-node--open {
+  z-index: 6;
+  width: min(410px, 46%) !important;
+  max-width: none;
+}
+
+.exp-node--open .exp-node__org {
+  max-width: none;
+}
+
+@media (max-width: 899px) {
+  .rail__lines {
+    aspect-ratio: auto;
+  }
+  .rail__line,
+  .rail__now {
+    display: none;
+  }
+  .rail .exp-node {
+    position: static !important;
+    width: 100% !important;
+  }
+  .rail .exp-node--open {
+    width: 100% !important;
+  }
+}
+
+/* --- стрелки каруселей: никакого фона --- */
+.proj-arrow {
+  background: none;
+}
+
+/* --- BV: большое по центру поверх штриховки --- */
+.proj-slot__wip {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  rotate: -4deg;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* --- утверждено к сборке: line-height и ровные паддинги --- */
+.approved-stamp {
+  line-height: 1.15;
+  padding: 14px 34px;
+  display: inline-block;
+}
+
+/* --- таблица спецификации: годы не переносятся --- */
+.pos-table {
+  table-layout: fixed;
+}
+
+.pos-table th:nth-child(1),
+.pos-table td:nth-child(1) {
+  width: 48px;
+}
+
+.pos-table th:nth-child(3),
+.pos-table td:nth-child(3) {
+  width: 112px;
+}
+
+.pos-table td:nth-child(3) {
+  white-space: nowrap;
+}
+
+
+/* ревизия 03: лист не режет раскрытые карточки оси; номера дипломов в строку */
+.diploma-card__caption b {
+  white-space: nowrap;
 }

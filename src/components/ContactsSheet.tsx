@@ -64,24 +64,43 @@ export function ContactsSheet() {
     if (!row || playgroundRef.current) return;
     setPhoneState('broken');
     addChange(t.footer.dynamic.phone);
-    const { createPlayground } = await import('../lib/physics');
-    const pg = await createPlayground(document.body, {
-      onImpact: () => knock(0.25),
-    });
-    playgroundRef.current = pg;
-    let total = 0;
-    let gone = 0;
-    for (const child of Array.from(row.children)) {
-      if (child instanceof HTMLElement && !child.dataset.noPhysics) {
+    const parts = Array.from(row.children).filter(
+      (c): c is HTMLElement => c instanceof HTMLElement && !c.dataset.noPhysics,
+    );
+    try {
+      const { createPlayground } = await import('../lib/physics');
+      const pg = await createPlayground(document.body, {
+        onImpact: () => knock(0.25),
+      });
+      playgroundRef.current = pg;
+      let total = 0;
+      let gone = 0;
+      for (const child of parts) {
         pg.fragmentize(child, { canSplit: true });
         total += 1;
       }
+      pg.setBin(() => {
+        gone += 1;
+        knock(0.4);
+        if (gone >= total) setPhoneState('empty');
+      });
+    } catch (e) {
+      // Физика недоступна: куски падают твинами.
+      console.warn('[physics] fallback', e);
+      parts.forEach((child, i) => {
+        gsap.to(child, {
+          y: window.innerHeight,
+          rotation: 160 + i * 60,
+          duration: 0.9 + i * 0.08,
+          delay: i * 0.06,
+          ease: 'power1.in',
+          onComplete: () => {
+            child.style.opacity = '0';
+          },
+        });
+      });
+      gsap.delayedCall(1.4, () => setPhoneState('empty'));
     }
-    pg.setBin(() => {
-      gone += 1;
-      knock(0.4);
-      if (gone >= total) setPhoneState('empty');
-    });
   };
 
   const restorePhoneRow = () => {

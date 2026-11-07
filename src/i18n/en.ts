@@ -37,7 +37,7 @@ export const en: Dict = {
     callouts: ['NIZHNY NOVGOROD → 56.3°N', 'H 2047 PX • SCALE 1:1'],
     stamp: {
       drawn: 'DRAWN',
-      drawnBy: 'DVOINYAKOV J.',
+      drawnBy: 'DVOINYAKOV E.',
       checked: 'CHECKED',
       checkedBy: 'YOU',
       sheet: 'SHEET 1 — SHEETS 8',
@@ -48,7 +48,7 @@ export const en: Dict = {
   },
   about: {
     kicker: 'SHEET 02 / ABOUT',
-    title: 'EDUCATION',
+    title: 'SPECIFICATION',
     ageLabel: 'AGE:',
     age: '20',
     note:
@@ -59,7 +59,7 @@ export const en: Dict = {
       {
         pos: '1',
         name: 'NRTK, Nizhny Novgorod — Information Systems and Programming, secondary vocational',
-        years: '2022–07.2026',
+        years: '2022–2026',
       },
       {
         pos: '2',
@@ -154,7 +154,6 @@ export const en: Dict = {
     next: 'Next frame',
     counterAria: 'Frame number',
     wipStamp: 'IN DEVELOPMENT',
-    slotNote: 'SCREENS — LATER',
     pencil: 'better live',
     items: [
       {
@@ -235,14 +234,14 @@ export const en: Dict = {
     kicker: 'SHEET 08 / CHANGE LOG',
     head: { izm: 'REV.', sheets: 'SHEETS', content: 'CONTENT', date: 'DATE' },
     rows: [
-      { izm: '01', sheets: 'all', content: 'first assembly of the set', date: '11.2026' },
-      { izm: '02', sheets: 'all', content: 'acceptance revision: rail, marquees, physics', date: '11.2026' },
+      { izm: '01', sheets: 'all', content: 'drawing set 2026-F1 released', date: '11.2026' },
+      { izm: '02', sheets: 'all', content: 'revision per acceptance results', date: '11.2026' },
     ],
     dynamic: {
-      theme: 'theme switched',
-      lang: 'localization switched',
-      phone: 'phone row smashed to pieces',
-      button: 'REV. button torn off',
+      theme: 'REV. applied: blueprint ↔ vellum',
+      lang: 'set language replaced',
+      phone: 'TEL position taken apart',
+      button: 'REV. 01 stamp torn off its mount',
     },
     note: 'SHEETS 8 • SCALE 1:1',
     copyright: '© 2026 EGOR DVOINYAKOV',

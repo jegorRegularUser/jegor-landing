@@ -80,12 +80,12 @@ export function Header() {
     if (!btn || reduced) return;
     gsap.fromTo(
       btn,
-      { rotate: -4 * s, y: s * 2 },
+      { rotate: -7 * s, y: s * 4 },
       {
-        rotate: 3 * s,
+        rotate: 5 * s,
         y: 0,
-        duration: 0.7,
-        ease: 'elastic.out(1, 0.35)',
+        duration: 0.8,
+        ease: 'elastic.out(1, 0.3)',
         transformOrigin: 'bottom left',
       },
     );
@@ -97,32 +97,56 @@ export function Header() {
     if (!btn || playgroundRef.current) return;
     setStage(3);
     addChange(t.footer.dynamic.button);
-    const { createPlayground } = await import('../lib/physics');
-    const pg = await createPlayground(document.body, {
-      onImpact: (_el, speed) => {
-        if (speed < 3) return;
-        const now = Date.now();
-        if (now - lastFlip.current < 400) return;
-        lastFlip.current = now;
-        toggleTheme();
-        knock(Math.min(1, speed / 12));
-      },
-    });
-    playgroundRef.current = pg;
-    pg.fragmentize(btn, { canSplit: false, restitution: 0.6 });
-    pg.setBin(() => {
-      // Кнопка в корзине: страница зарастает рисованными линиями и перезагружается.
-      const cover = document.createElement('div');
-      cover.className = 'sketch-cover';
-      cover.innerHTML = `<svg viewBox="0 0 1000 600" preserveAspectRatio="none">
-        ${Array.from({ length: 12 }, (_, i) => {
-          const y = 40 + i * 46;
-          return `<path d="M -20 ${y} C 250 ${y - 30} 750 ${y + 34} 1020 ${y - 12}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1400" stroke-dashoffset="1400" style="animation: sketch-draw 0.7s ${i * 0.09}s forwards ease-out" />`;
-        }).join('')}
-      </svg>`;
-      document.body.appendChild(cover);
-      window.setTimeout(() => window.location.reload(), 1100);
-    });
+    try {
+      const { createPlayground } = await import('../lib/physics');
+      const pg = await createPlayground(document.body, {
+        onImpact: (_el, speed) => {
+          if (speed < 3) return;
+          const now = Date.now();
+          if (now - lastFlip.current < 400) return;
+          lastFlip.current = now;
+          toggleTheme();
+          knock(Math.min(1, speed / 12));
+        },
+      });
+      playgroundRef.current = pg;
+      pg.fragmentize(btn, { canSplit: false, restitution: 0.6 });
+      pg.setBin(() => {
+        // Кнопка в корзине: страница зарастает рисованными линиями и перезагружается.
+        const cover = document.createElement('div');
+        cover.className = 'sketch-cover';
+        cover.innerHTML = `<svg viewBox="0 0 1000 600" preserveAspectRatio="none">
+          ${Array.from({ length: 12 }, (_, i) => {
+            const y = 40 + i * 46;
+            return `<path d="M -20 ${y} C 250 ${y - 30} 750 ${y + 34} 1020 ${y - 12}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1400" stroke-dashoffset="1400" style="animation: sketch-draw 0.7s ${i * 0.09}s forwards ease-out" />`;
+          }).join('')}
+        </svg>`;
+        document.body.appendChild(cover);
+        window.setTimeout(() => window.location.reload(), 1100);
+      });
+    } catch (e) {
+      // Физика недоступна: кнопка падает твинами, тема щёлкает на полпути.
+      console.warn('[physics] fallback', e);
+      const flips = [0.35, 0.7];
+      gsap.to(btn, {
+        y: window.innerHeight,
+        rotation: 380,
+        duration: 1.2,
+        ease: 'power1.in',
+        onUpdate: () => {
+          const p = gsap.getProperty(btn, 'y') as number;
+          const f = p / window.innerHeight;
+          if (flips.length && f > flips[0]) {
+            flips.shift();
+            toggleTheme();
+            knock(0.6);
+          }
+        },
+        onComplete: () => {
+          btn.style.opacity = '0';
+        },
+      });
+    }
   };
 
   /** Прибить кнопку обратно на гвозди: полёт, три удара, метки гвоздей. */

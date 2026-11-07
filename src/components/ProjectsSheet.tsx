@@ -153,7 +153,6 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
     fillStyle: 'cross-hatch',
     hachureGap: 10,
   }));
-  const stampRef = useRough<HTMLDivElement>('stamp', 220, () => ({ colorKey: 'accent', padding: 4 }));
   const blockRef = useRef<HTMLElement>(null);
   const disabled = item.status === 'wip';
 
@@ -185,10 +184,7 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
           {disabled ? (
             <div className="proj-carousel" style={{ border: 0 }}>
               <div className="proj-slot" ref={slotRef}>
-                <span className="proj-slot__note">{t.projects.slotNote}</span>
-              </div>
-              <div className="wip-stamp" ref={stampRef}>
-                {t.projects.wipStamp}
+                <span className="proj-slot__wip">{t.projects.wipStamp}</span>
               </div>
             </div>
           ) : (

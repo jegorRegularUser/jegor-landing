@@ -94,7 +94,7 @@ function OscilloscopeWindow() {
 function ErrorCard() {
   const ref = useRough<HTMLDivElement>('hachure-fill', 610, () => ({
     fillStyle: 'hachure',
-    hachureGap: 27, // втрое реже, чем было (9)
+    hachureGap: 10,
   }));
   return (
     <div className="err-card" ref={ref} aria-hidden="true">
@@ -106,8 +106,13 @@ function ErrorCard() {
     at OscilloscopeWindow (sheet-01.tsx:42)
     at renderWithHooks (react-dom.development.js:15486)
     at mountIndeterminateComponent (react-dom.development.js:20074)
-    at beginWork (react-dom.development.js:26156)`}</pre>
-      <pre className="err-card__comment">{`// TODO: не забыть починить фон портрета на белой теме`}</pre>
+    at beginWork (react-dom.development.js:26156)
+    at performUnitOfWork (react-dom.development.js:25192)
+    at workLoopSync (react-dom.development.js:25119)
+    at renderRootSync (react-dom.development.js:25087)
+    at performConcurrentWorkOnRoot (react-dom.development.js:24413)`}</pre>
+      <pre className="err-card__comment">{`// TODO: не забыть поставить градиент
+// на белой теме`}</pre>
     </div>
   );
 }
@@ -116,7 +121,7 @@ function ErrorCard() {
 function LightHatch() {
   const ref = useRough<HTMLDivElement>('hachure-fill', 611, () => ({
     fillStyle: 'hachure',
-    hachureGap: 27,
+    hachureGap: 10,
   }));
   return <div className="light-hatch" ref={ref} aria-hidden="true" />;
 }
@@ -237,8 +242,8 @@ export function HeroSheet() {
           {theme === 'light' && <ErrorCard />}
 
           <span className="callout callout--city" style={{ right: '2%', top: '0%' }} aria-hidden="true">
-            <CalloutArrow seed={640} flip />
             {c1}
+            <CalloutArrow seed={640} />
           </span>
           <span className="callout callout--scale" style={{ left: '30%', bottom: '-46px' }} aria-hidden="true">
             <CalloutArrow seed={641} vertical />
