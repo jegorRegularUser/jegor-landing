@@ -4,9 +4,16 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* Высота липкой шапки: от неё — scroll-padding якорей и высота титула. */
+  --header-h: 55px;
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: clip;
+  /* Липкая шапка не должна накрывать верх листа при переходе по якорю. */
+  scroll-padding-top: calc(var(--header-h) + 10px);
 }
 
 body {

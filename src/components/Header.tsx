@@ -7,7 +7,9 @@ import { useRough } from '../rough/useRough';
 import { useMedia } from '../hooks/useMedia';
 import { useChangeLog } from '../state/ChangeLog';
 import { knock } from '../lib/knock';
+import { playNailFx } from '../lib/nailFx';
 import type { Playground } from '../lib/physics';
+import type { Body } from 'matter-js';
 import { CAD_TOGGLE_EVENT } from './CadCursor';
 
 function cadOn(): boolean {
@@ -56,7 +58,14 @@ export function Header() {
   }));
   const [stage, setStage] = useState<ThemeStage>(0);
   const playgroundRef = useRef<Playground | null>(null);
+  const detachedBodyRef = useRef<Body | null>(null);
+  const nailAnchorRef = useRef<HTMLButtonElement>(null);
+  const pendingNailFxRef = useRef(false);
+  const detachingRef = useRef(false);
   const lastFlip = useRef(0);
+  // Гонка: эффект на stage 3 срабатывает раньше, чем резолвится import физики.
+  // pgReady отмечает готовность сцены и тела — тогда и вешаем setNailBack.
+  const [pgReady, setPgReady] = useState(false);
 
   useEffect(() => {
     const onToggle = () => setCad(cadOn());
@@ -91,10 +100,34 @@ export function Header() {
     );
   };
 
+  /** Пасхалка (16): страница зарастает рисованными линиями и перезагружается. */
+  const sketchCover = () => {
+    const cover = document.createElement('div');
+    cover.className = 'sketch-cover';
+    cover.innerHTML = `<svg viewBox="0 0 1000 600" preserveAspectRatio="none">
+      ${Array.from({ length: 12 }, (_, i) => {
+        const y = 40 + i * 46;
+        return `<path d="M -20 ${y} C 250 ${y - 30} 750 ${y + 34} 1020 ${y - 12}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1400" stroke-dashoffset="1400" style="animation: sketch-draw 0.7s ${i * 0.09}s forwards ease-out" />`;
+      }).join('')}
+    </svg>`;
+    document.body.appendChild(cover);
+    window.setTimeout(() => window.location.reload(), 1100);
+  };
+
   /** Оторвать кнопку в физику: тема меняется на каждом отскоке (11). */
   const detach = async () => {
     const btn = themeBtnRef.current;
-    if (!btn || playgroundRef.current) return;
+    if (!btn || playgroundRef.current || detachingRef.current) return;
+    detachingRef.current = true;
+    // rect и натуральные размеры — ДО setStage: React размонтирует кнопку,
+    // и у отсоединённого узла getBoundingClientRect уже нулевой.
+    const btnRect = btn.getBoundingClientRect();
+    const rect = {
+      left: btnRect.left,
+      top: btnRect.top,
+      width: btn.offsetWidth || btnRect.width,
+      height: btn.offsetHeight || btnRect.height,
+    };
     setStage(3);
     addChange(t.footer.dynamic.button);
     try {
@@ -109,24 +142,19 @@ export function Header() {
           knock(Math.min(1, speed / 12));
         },
       });
+      if (playgroundRef.current) return; // двойной клик: сцена уже создана
       playgroundRef.current = pg;
-      pg.fragmentize(btn, { canSplit: false, restitution: 0.6 });
-      pg.setBin(() => {
-        // Кнопка в корзине: страница зарастает рисованными линиями и перезагружается.
-        const cover = document.createElement('div');
-        cover.className = 'sketch-cover';
-        cover.innerHTML = `<svg viewBox="0 0 1000 600" preserveAspectRatio="none">
-          ${Array.from({ length: 12 }, (_, i) => {
-            const y = 40 + i * 46;
-            return `<path d="M -20 ${y} C 250 ${y - 30} 750 ${y + 34} 1020 ${y - 12}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1400" stroke-dashoffset="1400" style="animation: sketch-draw 0.7s ${i * 0.09}s forwards ease-out" />`;
-          }).join('')}
-        </svg>`;
-        document.body.appendChild(cover);
-        window.setTimeout(() => window.location.reload(), 1100);
+      detachedBodyRef.current = pg.fragmentize(btn, {
+        mode: 'solid',
+        restitution: 0.6,
+        rect,
       });
+      pg.setBin(sketchCover);
+      setPgReady(true);
     } catch (e) {
       // Физика недоступна: кнопка падает твинами, тема щёлкает на полпути.
       console.warn('[physics] fallback', e);
+      detachingRef.current = false; // кнопку можно будет оторвать снова после возврата
       const flips = [0.35, 0.7];
       gsap.to(btn, {
         y: window.innerHeight,
@@ -149,34 +177,49 @@ export function Header() {
     }
   };
 
-  /** Прибить кнопку обратно на гвозди: полёт, три удара, метки гвоздей. */
+  // Слот кнопки появляется на stage 3 — тогда и включаем прибивание притаскиванием (11).
+  useEffect(() => {
+    if (stage !== 3 || !pgReady) return;
+    const pg = playgroundRef.current;
+    const anchor = nailAnchorRef.current;
+    const body = detachedBodyRef.current;
+    if (!pg || !anchor || !body) return;
+    pg.setNailBack(anchor, body, () => {
+      // Гвозди забиты: снести физику и вернуть живую кнопку на её слот.
+      setStage(0);
+      setPgReady(false);
+      addChange(t.footer.dynamic.nailed);
+      knock(0.8);
+      window.setTimeout(() => {
+        pg.destroy();
+        if (playgroundRef.current === pg) {
+          playgroundRef.current = null;
+          detachedBodyRef.current = null;
+        }
+      }, 60);
+    });
+  }, [stage, pgReady, t, addChange]);
+
+  /** Прибить вручную (кнопка-запаска для a11y): физика сносится, молоток бьёт по живой кнопке. */
   const nailBack = () => {
-    const btn = themeBtnRef.current;
-    playgroundRef.current?.destroy();
+    const pg = playgroundRef.current;
     playgroundRef.current = null;
+    detachedBodyRef.current = null;
+    pg?.destroy();
     setStage(0);
+    setPgReady(false);
+    pendingNailFxRef.current = true;
+  };
+
+  // Кнопка вернулась на слот — играем молоток с гвоздями на живом элементе.
+  useEffect(() => {
+    if (stage !== 0 || !pendingNailFxRef.current) return;
+    pendingNailFxRef.current = false;
+    const btn = themeBtnRef.current;
     if (!btn) return;
     knock(0.9);
-    if (!reduced) {
-      gsap.fromTo(
-        btn,
-        { y: 220, rotate: 24, autoAlpha: 0 },
-        { y: 0, rotate: 0, autoAlpha: 1, duration: 0.55, ease: 'power2.in' },
-      );
-      [0, 1, 2].forEach((i) => {
-        const nail = document.createElement('span');
-        nail.className = 'nail-mark';
-        nail.style.left = `${6 + i * 9}px`;
-        nail.style.top = '50%';
-        btn.appendChild(nail);
-        window.setTimeout(() => {
-          knock(1 - i * 0.15);
-          gsap.fromTo(nail, { scaleX: 3, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.18 });
-        }, 550 + i * 160);
-        window.setTimeout(() => nail.remove(), 3200);
-      });
-    }
-  };
+    playNailFx(btn, { reduced, onDone: () => addChange(t.footer.dynamic.nailed) });
+  }, [stage, reduced, t, addChange, themeBtnRef]);
 
   const onThemeClick = () => {
     toggleTheme();
@@ -231,7 +274,8 @@ export function Header() {
             <button
               type="button"
               className="toggle-btn"
-              aria-label={t.contacts.restore}
+              ref={nailAnchorRef}
+              aria-label={t.nav.nail}
               onClick={nailBack}
               style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}
             >

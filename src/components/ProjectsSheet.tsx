@@ -153,6 +153,11 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
     fillStyle: 'cross-hatch',
     hachureGap: 10,
   }));
+  // Штамп «В РАЗРАБОТКЕ»: рисованная прямоугольная обводка (seed 220 из спеки §8.x).
+  const wipRef = useRough<HTMLSpanElement>('stamp', 220, () => ({
+    colorKey: 'accent',
+    padding: 10,
+  }));
   const blockRef = useRef<HTMLElement>(null);
   const disabled = item.status === 'wip';
 
@@ -184,7 +189,7 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
           {disabled ? (
             <div className="proj-carousel" style={{ border: 0 }}>
               <div className="proj-slot" ref={slotRef}>
-                <span className="proj-slot__wip">{t.projects.wipStamp}</span>
+                <span className="proj-slot__wip" ref={wipRef}>{t.projects.wipStamp}</span>
               </div>
             </div>
           ) : (

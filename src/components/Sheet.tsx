@@ -22,8 +22,15 @@ interface SheetProps {
 export function Sheet({ id, titleId, kicker, title, titleExtra, dense, hero, children }: SheetProps) {
   const ref = useRef<HTMLElement>(null);
 
+  // StrictMode монтирует дважды: без cleanup второй from-твин ловит лист
+  // уже скрытым первым и навсегда возвращает его в невидимость.
   useLayoutEffect(() => {
-    if (ref.current) sheetReveal(ref.current);
+    const tween = ref.current ? sheetReveal(ref.current) : undefined;
+    return () => {
+      tween?.scrollTrigger?.kill();
+      tween?.kill();
+      gsap.set(ref.current, { clearProps: 'all' });
+    };
   }, []);
 
   // Заголовок листа: SplitText по словам (посимвольно — только имя, §3.3).

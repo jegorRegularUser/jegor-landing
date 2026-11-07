@@ -90,29 +90,21 @@ function OscilloscopeWindow() {
   );
 }
 
-/** Светлая тема: фейковая ошибка React + штриховка, продолжающаяся ниже (9). */
+/** Светлая тема: фейковая ошибка React (забавка 8.1). Собственной штриховки
+ *  у панели нет — фон-штриховка живёт отдельным слоем LightHatch за ней.
+ *  Стектрейс намеренно «консольный» на английском, туду-приписка локализуется. */
 function ErrorCard() {
-  const ref = useRough<HTMLDivElement>('hachure-fill', 610, () => ({
-    fillStyle: 'hachure',
-    hachureGap: 10,
-  }));
+  const { t } = useLang();
   return (
-    <div className="err-card" ref={ref} aria-hidden="true">
+    <div className="err-card" aria-hidden="true">
       <div className="err-card__head">
         <span>Uncaught Error</span>
         <span>react-dom.development.js:15486</span>
       </div>
       <pre>{`Error: gradient didn't load on light theme
     at OscilloscopeWindow (sheet-01.tsx:42)
-    at renderWithHooks (react-dom.development.js:15486)
-    at mountIndeterminateComponent (react-dom.development.js:20074)
-    at beginWork (react-dom.development.js:26156)
-    at performUnitOfWork (react-dom.development.js:25192)
-    at workLoopSync (react-dom.development.js:25119)
-    at renderRootSync (react-dom.development.js:25087)
-    at performConcurrentWorkOnRoot (react-dom.development.js:24413)`}</pre>
-      <pre className="err-card__comment">{`// TODO: не забыть поставить градиент
-// на белой теме`}</pre>
+    at renderWithHooks (react-dom.development.js:15486)`}</pre>
+      <pre className="err-card__comment">{t.hero.errTodo}</pre>
     </div>
   );
 }
@@ -133,7 +125,7 @@ function CalloutArrow({ seed, flip, vertical }: { seed: number; flip?: boolean; 
 }
 
 export function HeroSheet() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { theme } = useTheme();
   const reduced = useReducedMotion();
   const nameRef = useRef<HTMLHeadingElement>(null);
@@ -153,6 +145,8 @@ export function HeroSheet() {
     [],
   );
 
+  // Интро — один раз за монтирование (зависимость только reduced): смена
+  // языка не должна перезапускать анимацию и снова всё прятать.
   useLayoutEffect(() => {
     const root = rootRef.current;
     const name = nameRef.current;
@@ -202,7 +196,26 @@ export function HeroSheet() {
       split?.revert();
       annoRef.current?.remove();
     };
-  }, [reduced, t]);
+  }, [reduced]);
+
+  // Смена языка: h1 пересоздаётся (key={lang}) — пере-сплит имени и свежее
+  // подчёркивание. Старый SplitText.revert() из интро восстанавливал свой
+  // исходный DOM и затирал React-текст — имя оставалось русским в EN.
+  const mountedLangRef = useRef(lang);
+  useLayoutEffect(() => {
+    if (mountedLangRef.current === lang) return;
+    mountedLangRef.current = lang;
+    if (reduced) return;
+    const name = nameRef.current;
+    if (!name || document.fonts.status !== 'loaded') return;
+    const split = new SplitText(name, { type: 'chars' });
+    const a = annotate(name, { type: 'underline', animationDuration: 600 });
+    a.show();
+    return () => {
+      split.revert();
+      a.remove();
+    };
+  }, [lang, reduced]);
 
   const [c1, c2] = t.hero.callouts;
 
@@ -210,7 +223,7 @@ export function HeroSheet() {
     <Sheet id="sheet-01" titleId="sheet-01-title" hero kicker={`${t.hero.kicker} • ${t.hero.kickerNote}`}>
       <div className="hero" ref={rootRef}>
         <div className="hero__text">
-          <h1 className="hero__name" ref={nameRef} id="sheet-01-title" style={{ display: 'block' }}>
+          <h1 key={lang} className="hero__name" ref={nameRef} id="sheet-01-title" style={{ display: 'block' }}>
             <span className="hero__name-line">{t.hero.nameLines[0]}</span>
             <span className="hero__name-line">{t.hero.nameLines[1]}</span>
           </h1>
@@ -229,8 +242,8 @@ export function HeroSheet() {
                 <img
                   src={portraitPng}
                   alt={t.hero.photoAlt}
-                  width={1696}
-                  height={2047}
+                  width={2000}
+                  height={2413}
                   fetchPriority="high"
                   decoding="async"
                   className="hero__portrait"

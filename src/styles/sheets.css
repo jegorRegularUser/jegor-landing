@@ -97,13 +97,21 @@
   margin-bottom: clamp(16px, 3vw, 32px);
 }
 
-/* Hero — утолщённая левая кромка (спека §4.1). */
+/* Hero — утолщённая левая кромка (спека §4.1); вертикальный пэдинг жмём,
+   чтобы титул со шапкой умещался ровно во вьюпорт (см. .hero в components). */
 .sheet--hero {
   margin-top: 0;
 }
 
 .sheet--hero .sheet__paper {
   border-left-width: 4px;
+}
+
+@media (min-width: 1024px) {
+  .sheet--hero .sheet__paper {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
 }
 
 @media (max-width: 479px) {

@@ -9,7 +9,9 @@
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--hairline);
-  transition: background-color 0.3s, border-color 0.3s;
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
 }
 
 .header__row {
@@ -80,7 +82,9 @@
   border: 1px solid var(--hairline);
   color: var(--ink);
   white-space: nowrap;
-  transition: border-color 0.2s, color 0.2s;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .toggle-btn:hover {
@@ -184,8 +188,10 @@
 
 @media (min-width: 1024px) {
   .hero {
-    grid-template-columns: 55% 45%;
-    min-height: calc(100svh - 120px);
+    grid-template-columns: 50% 50%;
+    /* Титул ровно во вьюпорт: минус шапка (var в base.css) и минус рамки
+       и пэдинги листа (16+2+3+40 ≈ 62px, см. sheets.css .sheet--hero). */
+    min-height: calc(100svh - var(--header-h) - 62px);
   }
 }
 
@@ -235,7 +241,7 @@
 
 .hero__portrait-wrap {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .hero__portrait {
@@ -434,41 +440,53 @@
   white-space: nowrap;
 }
 
-/* ---------- Опыт: монтажная ось ---------- */
+/* ---------- Опыт: последовательные карточки ---------- */
 
 .rail {
-  position: relative;
-  margin: 48px 0 8px;
-}
-
-.rail__svg {
-  width: 100%;
-  height: 40px;
-  overflow: visible;
-}
-
-.rail__nodes {
   display: grid;
-  gap: 24px;
-  margin-top: 24px;
+  gap: var(--s3);
+  margin-top: var(--s3);
 }
 
+/* Десктоп: четыре карточки в ряд (хронология слева направо).
+   Раскрытая карточка растит свою колонку, соседние стоят по верху колонки. */
 @media (min-width: 900px) {
-  .rail__nodes {
+  .rail {
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    align-items: start;
+  }
+  .exp-node {
+    padding: 12px 14px 14px;
+  }
+  .exp-node__org {
+    font-size: 1.05rem;
   }
 }
 
 .exp-node {
   position: relative;
-  padding: 16px;
-  background: transparent;
+  padding: 14px 18px 16px;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size:
+    8px 8px,
+    8px 8px,
+    40px 40px,
+    40px 40px;
 }
 
-.exp-node--active {
-  outline: 1.5px solid var(--accent);
-  outline-offset: 4px;
+.exp-node__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
 }
 
 .exp-node__period {
@@ -480,15 +498,14 @@
 
 .exp-node__org {
   font-family: var(--font-display);
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin: 6px 0 10px;
 }
 
 .exp-node__list {
-  margin: 0;
+  margin: 10px 0 0;
   padding-left: 18px;
   font-size: 15px;
   color: var(--ink);
@@ -496,6 +513,11 @@
 
 .exp-node__list li {
   margin-bottom: 4px;
+}
+
+.exp-node--open {
+  z-index: 6;
+  box-shadow: 0 10px 40px rgba(10, 30, 51, 0.35);
 }
 
 .now-pulse {
@@ -515,62 +537,6 @@
   .now-pulse {
     animation: none;
   }
-}
-
-/* ---------- Технологии ---------- */
-
-.tech-ruler {
-  width: 100%;
-  height: 44px;
-  overflow: visible;
-  margin-bottom: 12px;
-}
-
-.tech-track {
-  display: flex;
-  gap: 12px;
-  list-style: none;
-  margin: 0;
-  padding: 8px 2px 16px;
-  overflow-x: auto;
-  cursor: grab;
-  scrollbar-width: none;
-}
-
-@media (pointer: coarse) {
-  .tech-track {
-    scroll-snap-type: x mandatory;
-    cursor: auto;
-  }
-  .tech-chip {
-    scroll-snap-align: start;
-  }
-}
-
-.tech-track::-webkit-scrollbar {
-  display: none;
-}
-
-.tech-track.dragging {
-  cursor: grabbing;
-  user-select: none;
-}
-
-.tech-chip {
-  position: relative;
-  flex: 0 0 auto;
-  padding: 12px 20px;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  color: var(--ink);
-  transition: transform 0.15s ease-out;
-}
-
-.tech-chip:hover,
-.tech-chip:focus-visible,
-.tech-chip[aria-pressed='true'] {
-  transform: translateY(-1px);
 }
 
 /* ---------- Проекты ---------- */
@@ -939,82 +905,37 @@
   margin-top: var(--s0);
 }
 
-/* --- техно-марки: бесконечная лента, два ряда --- */
-.tech-marquee {
+/* --- техно-легенда: сетка огромных иконок без подписей (ревизия 03) --- */
+.tech-grid {
   display: grid;
-  gap: var(--s1);
-  overflow: hidden;
-  padding: var(--s0) 0;
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: var(--s2);
+  padding-top: var(--s1);
 }
 
-.tech-marquee__row {
-  display: flex;
-  width: max-content;
-  gap: var(--s1);
-  animation: marquee-left 60s linear infinite;
+.tech-tile {
+  display: grid;
+  place-items: center;
+  min-height: 124px;
+  padding: 12px 14px;
 }
 
-.tech-marquee__row--rev {
-  animation-name: marquee-right;
-  animation-duration: 74s;
+.tech-tile img {
+  height: 76px;
+  width: auto;
+  filter: saturate(0.9) contrast(1.1);
 }
 
-.tech-marquee:hover .tech-marquee__row,
-.tech-marquee:focus-within .tech-marquee__row {
-  animation-play-state: paused;
-}
-
-@keyframes marquee-left {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes marquee-right {
-  from {
-    transform: translateX(-50%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tech-marquee {
-    overflow-x: auto;
-  }
-  .tech-marquee__row {
-    animation: none;
-  }
-}
-
-.tech-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s0);
-}
-
-.tech-chip__icon {
-  width: 20px;
-  height: 20px;
-  filter: saturate(0.85);
-  flex: 0 0 auto;
-}
-
-.tech-hint {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: var(--s1);
-}
-
-/* --- фейковая ошибка React на светлой теме (забавка 8.1) --- */
+/* --- фейковая ошибка React на светлой теме (забавка 8.1) ---
+   Порядок в фигуре: штриховка (z0) → панель (z1) → портрет (z2):
+   портрет перекрывает панель, поэтому туду-текст зажат слева (max-width),
+   лицо начинается с ~76% ширины панели — 72% не задевает. Проценты от
+   одного бокса фигуры, так что композиция масштабируется без пиксель-перфекта. */
 .err-card {
   position: absolute;
-  z-index: 2;
-  width: 86%;
-  left: 8%;
+  z-index: 1;
+  width: 46%;
+  left: 0;
   top: 4%;
   background: rgba(30, 14, 14, 0.96);
   color: #f0ddd6;
@@ -1024,13 +945,15 @@
   box-shadow: 0 8px 32px rgba(24, 42, 60, 0.35);
 }
 
+/* Узкая панель: шапка — колонкой, иначе переносится посреди слов. */
 .err-card__head {
   display: flex;
-  justify-content: space-between;
-  gap: var(--s2);
-  padding: var(--s0) var(--s2);
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 10px;
   background: rgba(140, 30, 20, 0.55);
   font-weight: 600;
+  font-size: 11px;
 }
 
 .err-card pre {
@@ -1044,6 +967,32 @@
 
 .err-card__comment {
   color: #9ec49a;
+  max-width: 72%;
+}
+
+/* Узкий экран: панель в поток ПОД фото — иначе 46% ширины превращают
+   стек в вертикальную простыню поверх следующего листа. Слой: relative, а не
+   static — иначе absolute-штриховка фигуры (z0) рисуется поверх панели.
+   Выноски прячем (специфичность 0-2-0 — rev02 .callout ниже по файлу
+   перебивал бы 0-1-0): город дублируется строкой роли, масштаб мешает панели.
+   Штамп-таблица — в поток следом: она абсолютом от низа фигуры и наехала бы
+   на панель, которая фигуру теперь растягивает; relative — по той же причине
+   слоя, что и панель. */
+@media (max-width: 1023px) {
+  .err-card {
+    position: relative;
+    width: auto;
+    margin-top: 12px;
+  }
+  .callout.callout--city,
+  .callout.callout--scale {
+    display: none;
+  }
+  .title-block {
+    position: relative;
+    margin: 12px auto 0;
+    width: max-content;
+  }
 }
 
 /* --- проекты: большие блоки с каруселью --- */
@@ -1143,7 +1092,9 @@
   border: 1px solid var(--hairline);
   text-decoration: none;
   color: var(--ink);
-  transition: border-color 0.2s, transform 0.15s;
+  transition:
+    border-color 0.2s,
+    transform 0.15s;
 }
 
 .stamp-action:hover,
@@ -1186,51 +1137,73 @@
   pointer-events: none;
 }
 
+/* Кусок физики — клон исходного элемента со своей вёрсткой; от базового стиля
+   только позиционирование и курсор (11). */
 .physics-piece {
   position: absolute !important;
   left: 0 !important;
   top: 0 !important;
   margin: 0 !important;
   will-change: transform;
-  background: var(--surface);
-  border: 1px solid var(--ink);
-  padding: 12px 14px;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  white-space: nowrap;
   pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
+.physics-piece--grab {
+  cursor: grabbing;
+}
+
+.physics-piece--nail {
+  cursor: default;
+  z-index: 3;
+}
+
+/* --- корзина из фото: большая, торчит из левого нижнего угла примерно наполовину (16) --- */
 .physics-bin {
   position: absolute;
-  width: 120px;
-  height: 80px;
-  border: 2px dashed var(--muted);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  font-size: 30px;
-  font-family: var(--font-mono);
-}
-
-.physics-bin::after {
-  content: attr(data-label);
-  position: absolute;
-  bottom: 4px;
-  font-size: 12px;
-}
-
-/* --- расшатанная кнопка темы: гвозди --- */
-.theme-btn--loose {
-  border-color: var(--accent);
-}
-
-.nail-mark {
-  position: absolute;
-  width: 12px;
-  height: 2px;
-  background: var(--ink);
   pointer-events: none;
+  transform: translateX(-115%);
+  transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.05);
+}
+
+.physics-bin--in {
+  transform: translateX(0);
+}
+
+.physics-bin--out {
+  transform: translateX(-130%);
+}
+
+.physics-bin img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: saturate(0.85) drop-shadow(0 6px 14px rgba(10, 30, 51, 0.4));
+}
+
+/* --- FX прибивания: стоковый молоток и гвозди над слотом кнопки (11) --- */
+.nail-fx {
+  position: fixed;
+  z-index: 97;
+  pointer-events: none;
+}
+
+.nail-fx__nail {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(48deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.nail-fx__hammer {
+  position: absolute;
+  transform-origin: 50% 88%; /* конец рукояти — ось замаха */
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
 }
 
 /* --- выноски hero: не наезжают на лицо, мобильные правила --- */
@@ -1246,76 +1219,7 @@
   }
 }
 
-/* --- ось-гит: раскладка веток --- */
-.rail {
-  position: relative;
-  min-height: 520px;
-  margin-top: var(--s3);
-}
-
-.rail__svg--branch {
-  width: 100%;
-  height: 240px;
-}
-
-.rail__canvas {
-  position: absolute;
-  inset: 0;
-}
-
-.rail .exp-node {
-  position: absolute;
-}
-
-.rail__note {
-  position: absolute;
-  left: 36%;
-  top: 47%;
-  font-family: var(--font-hand);
-  font-size: 20px;
-  color: var(--muted);
-  rotate: -2deg;
-}
-
-@media (max-width: 899px) {
-  .rail {
-    min-height: 0;
-  }
-  .rail__svg--branch {
-    display: none;
-  }
-  .rail__canvas {
-    position: static;
-    display: grid;
-    gap: var(--s3);
-  }
-  .rail .exp-node {
-    position: static !important;
-    width: 100% !important;
-  }
-  .rail__note {
-    position: static;
-    margin-top: var(--s2);
-  }
-}
-
-/* --- слои чипа, иконка кнопки темы, заком-обложка --- */
-.chip-layer {
-  position: absolute;
-  inset: 0;
-}
-
-.chip-layer--fill .rough-overlay {
-  opacity: 0;
-  transition: opacity 0.15s ease-out;
-}
-
-.tech-chip:hover .chip-layer--fill .rough-overlay,
-.tech-chip:focus-visible .chip-layer--fill .rough-overlay,
-.tech-chip[aria-pressed='true'] .chip-layer--fill .rough-overlay {
-  opacity: 0.9;
-}
-
+/* --- иконка кнопки темы, заком-обложка --- */
 .theme-btn {
   display: inline-flex;
   align-items: center;
@@ -1389,10 +1293,6 @@
   padding: 2px;
 }
 
-.err-card {
-  top: 8%;
-}
-
 /* --- координатные метки не подрезаются --- */
 .sheet__marks {
   inset: 0 6px;
@@ -1409,96 +1309,6 @@
 }
 
 /* ==== РЕВИЗИЯ 02 ==== */
-
-/* --- ось: сцена линий и карточки --- */
-.rail__lines {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1000 / 300;
-}
-
-.rail__line {
-  position: absolute;
-  inset: 0;
-}
-
-.rail__line .rough-overlay {
-  overflow: visible;
-}
-
-.rail__now {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.rail__now--main {
-  right: 2px;
-  top: 37%;
-}
-
-.rail__now--cemp {
-  right: 2px;
-  top: 10%;
-}
-
-.rail .exp-node {
-  position: absolute;
-}
-
-.exp-node__head {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  text-align: left;
-  width: 100%;
-}
-
-.exp-node__org {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.exp-node--open {
-  z-index: 6;
-  width: min(430px, 92%) !important;
-  background-color: var(--surface);
-  background-image:
-    linear-gradient(var(--grid-minor) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
-    linear-gradient(var(--grid-major) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
-  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
-  box-shadow: 0 10px 40px rgba(10, 30, 51, 0.35);
-}
-
-.exp-node__body {
-  margin-top: 10px;
-}
-
-@media (max-width: 899px) {
-  .rail__lines {
-    display: none;
-  }
-  .rail .exp-node {
-    position: static !important;
-    width: 100% !important;
-  }
-  .rail .exp-node--open {
-    width: 100% !important;
-  }
-}
-
-/* --- марки: рамки одним оверлеем на ряд --- */
-.tech-marquee__row {
-  position: relative;
-}
 
 /* --- карусели проектов --- */
 .proj-carousel {
@@ -1528,12 +1338,19 @@
   right: 10px;
 }
 
+/* Полоса-прогресс лежит ПОВЕРХ кадра внизу, полупрозрачной ватманской плашкой. */
 .proj-carousel__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: var(--s1);
-  padding: 10px 2px 2px;
+  padding: 8px 14px;
   cursor: pointer;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
 }
 
 .proj-carousel__num {
@@ -1660,121 +1477,14 @@
   margin-bottom: 4px;
 }
 
-/* --- корзина из фото, выезжает при захвате куска --- */
-.physics-bin {
-  width: 130px;
-  height: 110px;
-  border: 0;
-  background: none;
-  transform: translateX(-110%);
-  transition: transform 0.35s ease-out;
-}
-
-.physics-bin--in {
-  transform: translateX(0);
-}
-
-.physics-bin img {
-  width: 100%;
-  height: auto;
-  filter: saturate(0.85) drop-shadow(0 6px 14px rgba(10, 30, 51, 0.4));
-}
-
 /* ==== РЕВИЗИЯ 03: по скриншотам ==== */
-
-/* --- ось: одна система координат (бокс 1000×240) --- */
-.rail {
-  min-height: 0;
-}
-
-.rail__lines {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1000 / 240;
-}
-
-.rail__line {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.rail__now {
-  position: absolute;
-  z-index: 1;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.rail__now--main {
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.rail__now--cemp {
-  right: 0;
-  top: 16.7%;
-  transform: translateY(-50%);
-}
-
-.rail .exp-node {
-  position: absolute;
-  z-index: 2;
-  background-color: var(--surface);
-  background-image:
-    linear-gradient(var(--grid-minor) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
-    linear-gradient(var(--grid-major) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
-  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
-  min-width: 150px;
-}
-
-.exp-node__head {
-  cursor: pointer;
-}
-
-.exp-node__org {
-  max-width: 175px;
-}
-
-.exp-node--open {
-  z-index: 6;
-  width: min(410px, 46%) !important;
-  max-width: none;
-}
-
-.exp-node--open .exp-node__org {
-  max-width: none;
-}
-
-@media (max-width: 899px) {
-  .rail__lines {
-    aspect-ratio: auto;
-  }
-  .rail__line,
-  .rail__now {
-    display: none;
-  }
-  .rail .exp-node {
-    position: static !important;
-    width: 100% !important;
-  }
-  .rail .exp-node--open {
-    width: 100% !important;
-  }
-}
 
 /* --- стрелки каруселей: никакого фона --- */
 .proj-arrow {
   background: none;
 }
 
-/* --- BV: большое по центру поверх штриховки --- */
+/* --- BV: большое по центру поверх штриховки, с рисованной рамкой-штампом --- */
 .proj-slot__wip {
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 3rem);
@@ -1784,7 +1494,7 @@
   color: var(--accent);
   rotate: -4deg;
   text-align: center;
-  padding: 0 24px;
+  padding: 12px 30px;
 }
 
 /* --- утверждено к сборке: line-height и ровные паддинги --- */
@@ -1812,7 +1522,6 @@
 .pos-table td:nth-child(3) {
   white-space: nowrap;
 }
-
 
 /* ревизия 03: лист не режет раскрытые карточки оси; номера дипломов в строку */
 .diploma-card__caption b {

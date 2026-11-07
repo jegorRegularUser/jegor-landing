@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { gsap } from '../lib/gsap';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
@@ -29,7 +30,10 @@ export function ContactsSheet() {
   const [copied, setCopied] = useState<string | null>(null);
   const phoneRowRef = useRef<HTMLDivElement>(null);
   const playgroundRef = useRef<Playground | null>(null);
-  const [phoneState, setPhoneState] = useState<'idle' | 'broken' | 'empty'>('idle');
+  // Гонка двойного клика: guard после await не спасает — второй вызов успевает
+  // пройти до установки playgroundRef и создать вторую сцену.
+  const startingRef = useRef(false);
+  const [phoneState, setPhoneState] = useState<'idle' | 'broken'>('idle');
   const liveRef = useRef<HTMLSpanElement>(null);
 
   // Анимация штампа — в эффекте (реф уже смонтирован), надпись остаётся (12.3).
@@ -58,65 +62,77 @@ export function ContactsSheet() {
     if (liveRef.current) liveRef.current.textContent = t.contacts.copiedAria;
   };
 
-  /** 7.2 + 10: строка телефона разбивается на куски и падает; корзина снизу слева. */
-  const breakPhoneRow = async () => {
+  /** 7.2 + 10 + 11: вся строка TEL разбивается на полигональные осколки (вороной),
+   *  докалывается о края экрана; корзина съедает их и уезжает — строка остаётся пустой. */
+  const breakPhoneRow = async (e: ReactMouseEvent<HTMLButtonElement>) => {
     const row = phoneRowRef.current;
-    if (!row || playgroundRef.current) return;
-    setPhoneState('broken');
+    if (!row || playgroundRef.current || startingRef.current) return;
+    startingRef.current = true;
+    // Точка удара — центр кнопки «РАСКРЫТЬ»: осколки летят от неё. Снимаем до await.
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    const impact = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 };
     addChange(t.footer.dynamic.phone);
-    const parts = Array.from(row.children).filter(
-      (c): c is HTMLElement => c instanceof HTMLElement && !c.dataset.noPhysics,
-    );
     try {
       const { createPlayground } = await import('../lib/physics');
       const pg = await createPlayground(document.body, {
-        onImpact: () => knock(0.25),
+        onImpact: () => knock(0.22),
       });
-      playgroundRef.current = pg;
-      let total = 0;
-      let gone = 0;
-      for (const child of parts) {
-        pg.fragmentize(child, { canSplit: true });
-        total += 1;
+      if (playgroundRef.current) {
+        pg.destroy(); // страховка от гонки: сцена уже есть
+        return;
       }
+      playgroundRef.current = pg;
+      // Сначала режем строку (кнопка ещё в ней — уходит в осколки), потом снимаем state.
+      pg.fragmentize(row, { mode: 'shatter', impact });
+      setPhoneState('broken');
       pg.setBin(() => {
-        gone += 1;
         knock(0.4);
-        if (gone >= total) setPhoneState('empty');
       });
-    } catch (e) {
-      // Физика недоступна: куски падают твинами.
-      console.warn('[physics] fallback', e);
-      parts.forEach((child, i) => {
-        gsap.to(child, {
-          y: window.innerHeight,
-          rotation: 160 + i * 60,
-          duration: 0.9 + i * 0.08,
-          delay: i * 0.06,
-          ease: 'power1.in',
-          onComplete: () => {
-            child.style.opacity = '0';
-          },
-        });
+    } catch (err) {
+      // Физика недоступна: строка падает твинами и остаётся пустой.
+      console.warn('[physics] fallback', err);
+      startingRef.current = false; // сцены нет — кнопку можно нажать снова
+      setPhoneState('broken');
+      gsap.to(row, {
+        y: window.innerHeight,
+        rotation: 24,
+        duration: 0.9,
+        ease: 'power1.in',
+        onComplete: () => {
+          row.style.opacity = '0';
+        },
       });
-      gsap.delayedCall(1.4, () => setPhoneState('empty'));
     }
   };
 
-  const restorePhoneRow = () => {
-    playgroundRef.current?.destroy();
-    playgroundRef.current = null;
-    setPhoneState('idle');
-  };
-
   const contactRows = [
-    { key: 'tg', label: t.contacts.telegram.label, value: t.contacts.telegram.value, href: t.contacts.telegram.href },
-    { key: 'mail', label: t.contacts.email.label, value: t.contacts.email.value, href: t.contacts.email.href },
-    { key: 'gh', label: t.contacts.github.label, value: t.contacts.github.value, href: t.contacts.github.href },
+    {
+      key: 'tg',
+      label: t.contacts.telegram.label,
+      value: t.contacts.telegram.value,
+      href: t.contacts.telegram.href,
+    },
+    {
+      key: 'mail',
+      label: t.contacts.email.label,
+      value: t.contacts.email.value,
+      href: t.contacts.email.href,
+    },
+    {
+      key: 'gh',
+      label: t.contacts.github.label,
+      value: t.contacts.github.value,
+      href: t.contacts.github.href,
+    },
   ];
 
   return (
-    <Sheet id="sheet-07" titleId="sheet-07-title" kicker={t.contacts.kicker} title={t.contacts.title}>
+    <Sheet
+      id="sheet-07"
+      titleId="sheet-07-title"
+      kicker={t.contacts.kicker}
+      title={t.contacts.title}
+    >
       <div className="stamp-grid" ref={gridRef}>
         {contactRows.map((c) => (
           <div className="stamp-grid__row" key={c.key}>
@@ -157,16 +173,7 @@ export function ContactsSheet() {
                 {t.contacts.reveal}
               </button>
             )}
-            {phoneState === 'empty' && (
-              <button
-                type="button"
-                className="toggle-btn"
-                data-no-physics
-                onClick={restorePhoneRow}
-              >
-                {t.contacts.restore}
-              </button>
-            )}
+            {/* broken: строки больше нет — осколки унесли её в корзину, и она уехала (11) */}
           </span>
         </div>
       </div>
@@ -181,7 +188,13 @@ export function ContactsSheet() {
       <span
         ref={liveRef}
         aria-live="polite"
-        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          overflow: 'hidden',
+          clipPath: 'inset(50%)',
+        }}
       />
     </Sheet>
   );

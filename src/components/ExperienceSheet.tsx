@@ -7,25 +7,12 @@ import { useMedia } from '../hooks/useMedia';
 import { Sheet } from './Sheet';
 
 /**
- * ЛИСТ 03 — Опыт как git-история (ревизия 03).
- * Одна система координат: аспект-бокс 1000×240 — в нём живут rough-линии,
- * точки Н.В. и карточки (проценты бокса = координаты линий).
- * Карточки компактные (дата + компания, на бумаге, поверх линий);
- * по клику раскрываются с анимацией поверх контента, rough-рамка
- * перерисовывается на весь раскрытый размер тем же seed'ом.
+ * ЛИСТ 03 — Опыт (ревизия 04): последовательный стек карточек.
+ * Гит-ветки и абсолютная раскладка убраны — карточки наезжали друг на друга
+ * и вылезали за лист. Порядок хронологический; раскрытие — анимацией,
+ * rough-рамка перерисовывается на новый размер тем же seed'ом.
+ * Корсофт и ЦЭМП — с оранжевой рамкой (обе «по н.в.»).
  */
-
-const MAIN_H = 'M 0 120 H 1000';
-const FREELANCE_H = 'M 355 120 C 385 120 385 205 415 205 H 585 C 615 205 615 120 645 120';
-const CEMP_H = 'M 710 120 C 740 120 740 40 770 40 H 1000';
-
-/** Позиции компактных карточек в процентах бокса 1000×240. */
-const NODE_POS = [
-  { left: '1%', bottom: '55%' }, // Wondertales — над основной линией у её начала
-  { left: '10%', top: '56%' }, // Корсофт — под основной линией
-  { left: '37%', top: '88%' }, // Фриланс — под своей веткой
-  { right: '2.5%', top: '0%' }, // ЦЭМП — над своей веткой, якорь вправо (точка Н.В. видна)
-];
 
 function ExperienceNode({ seed, index, now, accent }: {
   seed: number;
@@ -77,7 +64,6 @@ function ExperienceNode({ seed, index, now, accent }: {
     <div
       ref={ref}
       className={`exp-node${open ? ' exp-node--open' : ''}`}
-      style={NODE_POS[index]}
     >
       <button
         type="button"
@@ -90,7 +76,7 @@ function ExperienceNode({ seed, index, now, accent }: {
           {node.period}
           {now && <span className="now-pulse">● {t.experience.nowMark}</span>}
         </span>
-        <span className="exp-node__org">{node.org}</span>
+        <span className="exp-node__org" ref={orgRef}>{node.org}</span>
       </button>
       {open && (
         <div className="exp-node__body" ref={bodyRef}>
@@ -108,69 +94,39 @@ function ExperienceNode({ seed, index, now, accent }: {
 export function ExperienceSheet() {
   const { t } = useLang();
   const reduced = useMedia('(prefers-reduced-motion: reduce)');
-  const desktop = useMedia('(min-width: 900px)');
   const stageRef = useRef<HTMLDivElement>(null);
 
-  // Rough-гит-линии: вход — мягкий fade всей сцены (карантин rough соблюдён).
+  // Вход стека: карточки поднимаются по очереди, когда лист доскроллился.
   useLayoutEffect(() => {
     const stage = stageRef.current;
-    if (!stage || reduced || !desktop) return;
-    const overlays = stage.querySelectorAll<SVGSVGElement>('.rail__line .rough-overlay');
-    const tweens = Array.from(overlays).map((el, i) =>
-      gsap.from(el, {
-        autoAlpha: 0,
-        duration: 0.6,
-        delay: i * 0.25,
-        scrollTrigger: { trigger: stage, start: 'top 80%', once: true },
-      }),
-    );
-    return () => tweens.forEach((tw) => {
+    if (!stage || reduced) return;
+    const tw = gsap.from(stage.querySelectorAll('.exp-node'), {
+      autoAlpha: 0,
+      y: 24,
+      stagger: 0.08,
+      duration: 0.5,
+      ease: 'power2.out',
+      scrollTrigger: { trigger: stage, start: 'top 80%', once: true },
+    });
+    return () => {
       tw.scrollTrigger?.kill();
       tw.kill();
-    });
-  }, [reduced, desktop]);
+    };
+  }, [reduced]);
 
   return (
     <Sheet id="sheet-03" titleId="sheet-03-title" kicker={t.experience.kicker} title={t.experience.title}>
       <div className="rail" ref={stageRef}>
-        <div className="rail__lines">
-          <RailLines />
-          <span className="rail__now rail__now--main" aria-hidden="true" />
-          <span className="rail__now rail__now--cemp" aria-hidden="true" />
-          <ExperienceNode seed={400} index={0} />
-          <ExperienceNode seed={401} index={1} now />
-          <ExperienceNode seed={402} index={2} />
-          <ExperienceNode seed={403} index={3} now accent />
-        </div>
+        {t.experience.nodes.map((_, i) => (
+          <ExperienceNode
+            key={i}
+            seed={400 + i}
+            index={i}
+            now={i === 1 || i === 3}
+            accent={i === 1 || i === 3}
+          />
+        ))}
       </div>
     </Sheet>
-  );
-}
-
-/** Три rough-линии оси: основная (Корсофт), фриланс-ветка, ветка ЦЭМП. */
-function RailLines() {
-  const mainRef = useRough<HTMLDivElement>('path', 620, () => ({
-    d: MAIN_H,
-    scaleW: 1000,
-    strokeWidth: 3,
-  }));
-  const freelanceRef = useRough<HTMLDivElement>('path', 621, () => ({
-    d: FREELANCE_H,
-    scaleW: 1000,
-    strokeWidth: 2.4,
-    colorKey: 'accent2',
-  }));
-  const cempRef = useRough<HTMLDivElement>('path', 622, () => ({
-    d: CEMP_H,
-    scaleW: 1000,
-    strokeWidth: 3,
-    colorKey: 'accent',
-  }));
-  return (
-    <>
-      <div className="rail__line" ref={mainRef} aria-hidden="true" />
-      <div className="rail__line" ref={freelanceRef} aria-hidden="true" />
-      <div className="rail__line" ref={cempRef} aria-hidden="true" />
-    </>
   );
 }

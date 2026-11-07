@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ru } from './ru';
 import { en } from './en';
 import type { Dict } from './ru';
+import { redrawAll } from '../rough/registry';
 
 export type Lang = 'ru' | 'en';
 
@@ -35,6 +36,13 @@ export function LangProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(() => ({ lang, t: DICTS[lang], setLang }), [lang, setLang]);
+
+  // Текст поменялся — рамки rough отрисованы под старые размеры. Перерисовать
+  // теми же seed'ами (штамп «УТВЕРЖДЕНО», стрелки выносок и т.д.).
+  useEffect(() => {
+    redrawAll();
+  }, [lang]);
+
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;
 }
 

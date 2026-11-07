@@ -91,6 +91,32 @@ function unrotate(dx: number, dy: number, mount: HTMLElement): [number, number] 
   return [dx * cos - dy * sin, dx * sin + dy * cos];
 }
 
+/**
+ * Локальные координаты target внутри mount по цепочке offsetParent:
+ * layout-позиция, не зависящая от transform (повёрнутый штамп не раздувает
+ * рамку). null — если target не DOM-потомок mount.
+ */
+function localOffset(target: Element, mount: HTMLElement): [number, number] | null {
+  let x = 0;
+  let y = 0;
+  let el: Element | null = target;
+  while (el && el !== mount) {
+    if (!(el instanceof HTMLElement)) return null;
+    x += el.offsetLeft;
+    y += el.offsetTop;
+    el = el.offsetParent;
+  }
+  return el === mount ? [x, y] : null;
+}
+
+/** Layout-размер без влияния transform'ов (offsetWidth округляет до px — норм). */
+function layoutSize(el: Element): { w: number; h: number } | null {
+  if (el instanceof HTMLElement && el.offsetWidth > 0 && el.offsetHeight > 0) {
+    return { w: el.offsetWidth, h: el.offsetHeight };
+  }
+  return null;
+}
+
 function drawEntry(entry: Entry): void {
   const { kind, seed, opts, mount } = entry;
   const target = opts.targetEl ?? mount;
@@ -99,21 +125,26 @@ function drawEntry(entry: Entry): void {
     mount.style.position = 'relative';
   }
   const mountRect = mount.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
   const pad = opts.padding ?? 0;
 
-  const [dx, dy] = unrotate(
-    targetRect.left - mountRect.left,
-    targetRect.top - mountRect.top,
-    mount,
-  );
-  const w = targetRect.width;
-  const h = targetRect.height;
+  // Геометрия — только layout-значения: mount может быть повёрнут
+  // (штамп «УТВЕРЖДЕНО»), а getBoundingClientRect вернул бы AABB повёрнутого
+  // бокса — рамка уезжала бы вниз втрое относительно верха.
+  const local = localOffset(target, mount);
+  const size = layoutSize(target);
+  const [dx, dy] = local ?? (() => {
+    const targetRect = target.getBoundingClientRect();
+    return unrotate(targetRect.left - mountRect.left, targetRect.top - mountRect.top, mount);
+  })();
+  const w = size?.w ?? target.getBoundingClientRect().width;
+  const h = size?.h ?? target.getBoundingClientRect().height;
 
+  const svgW = layoutSize(mount)?.w ?? mountRect.width;
+  const svgH = layoutSize(mount)?.h ?? mountRect.height;
   const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('width', String(mountRect.width));
-  svg.setAttribute('height', String(mountRect.height));
-  svg.setAttribute('viewBox', `0 0 ${mountRect.width} ${mountRect.height}`);
+  svg.setAttribute('width', String(svgW));
+  svg.setAttribute('height', String(svgH));
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
   svg.setAttribute('aria-hidden', 'true');
   svg.classList.add('rough-overlay');
   svg.style.cssText =
