@@ -21,7 +21,10 @@ function OscilloscopeWindow() {
   const quadRef = useRef<ShaderQuad | null>(null);
   const reduced = useReducedMotion();
   const [failed, setFailed] = useState(false);
-  const frameRef = useRough<HTMLDivElement>('frame', 51, () => ({ colorKey: 'accent2', padding: 6 }));
+  const frameRef = useRough<HTMLDivElement>('frame', 51, () => ({
+    colorKey: 'accent2',
+    padding: 6,
+  }));
 
   useEffect(() => {
     let disposed = false;
@@ -109,19 +112,47 @@ function ErrorCard() {
   );
 }
 
-/** Штриховка на всю высоту фигуры в светлой теме — за портретом. */
+/** Фон фигуры в светлой теме — за портретом: рисованный полигон с оранжевой
+ *  (терракота --accent) hachure-заливкой, тот же вид, что у плиток листа 03
+ *  (jitter-контур, штрих −41°). Бокс подложки задаёт .light-hatch — он
+ *  повторяет геометрию окна осциллографа тёмной темы. */
 function LightHatch() {
-  const ref = useRough<HTMLDivElement>('hachure-fill', 611, () => ({
+  const ref = useRough<HTMLDivElement>('polygon', 611, () => ({
+    colorKey: 'accent',
+    padding: 8,
+    jitter: 8,
+    roughness: 2.1,
     fillStyle: 'hachure',
-    hachureGap: 10,
+    hachureGap: 13,
+    hachureAngle: -41,
+    strokeWidth: 1,
+    opacity: 0.4,
   }));
   return <div className="light-hatch" ref={ref} aria-hidden="true" />;
 }
 
 /** Рисованная стрелка выноски (3): rough-оверлей вместо голого svg. */
-function CalloutArrow({ seed, flip, vertical }: { seed: number; flip?: boolean; vertical?: boolean }) {
-  const ref = useRough<HTMLSpanElement>('arrow', seed, () => ({ flip, padding: 2, roughness: 1.2 }));
-  return <span className={`callout-arrow${vertical ? ' callout-arrow--v' : ''}`} ref={ref} aria-hidden="true" />;
+function CalloutArrow({
+  seed,
+  flip,
+  vertical,
+}: {
+  seed: number;
+  flip?: boolean;
+  vertical?: boolean;
+}) {
+  const ref = useRough<HTMLSpanElement>('arrow', seed, () => ({
+    flip,
+    padding: 2,
+    roughness: 1.2,
+  }));
+  return (
+    <span
+      className={`callout-arrow${vertical ? ' callout-arrow--v' : ''}`}
+      ref={ref}
+      aria-hidden="true"
+    />
+  );
 }
 
 export function HeroSheet() {
@@ -160,10 +191,7 @@ export function HeroSheet() {
 
     let split: SplitText | null = null;
     const tl = gsap.timeline({ paused: true });
-    const fontsReady = Promise.race([
-      document.fonts.ready,
-      new Promise((r) => setTimeout(r, 800)),
-    ]);
+    const fontsReady = Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 800))]);
 
     fontsReady.then(() => {
       // Шрифты готовы (или 800ms истекли): имя либо сплитится, либо живёт как есть.
@@ -221,10 +249,21 @@ export function HeroSheet() {
   const [c1, c2] = t.hero.callouts;
 
   return (
-    <Sheet id="sheet-01" titleId="sheet-01-title" hero kicker={`${t.hero.kicker} • ${t.hero.kickerNote}`}>
+    <Sheet
+      id="sheet-01"
+      titleId="sheet-01-title"
+      hero
+      kicker={`${t.hero.kicker} • ${t.hero.kickerNote}`}
+    >
       <div className="hero" ref={rootRef}>
         <div className="hero__text">
-          <h1 key={lang} className="hero__name" ref={nameRef} id="sheet-01-title" style={{ display: 'block' }}>
+          <h1
+            key={lang}
+            className="hero__name"
+            ref={nameRef}
+            id="sheet-01-title"
+            style={{ display: 'block' }}
+          >
             <span className="hero__name-line">{t.hero.nameLines[0]}</span>
             <span className="hero__name-line">{t.hero.nameLines[1]}</span>
           </h1>
@@ -255,11 +294,19 @@ export function HeroSheet() {
 
           {theme === 'light' && <ErrorCard />}
 
-          <span className="callout callout--city" style={{ right: '2%', top: '0%' }} aria-hidden="true">
+          <span
+            className="callout callout--city"
+            style={{ right: '2%', top: '0%' }}
+            aria-hidden="true"
+          >
             {c1}
             <CalloutArrow seed={640} />
           </span>
-          <span className="callout callout--scale" style={{ left: '30%', bottom: '-46px' }} aria-hidden="true">
+          <span
+            className="callout callout--scale"
+            style={{ left: '30%', bottom: '-46px' }}
+            aria-hidden="true"
+          >
             <CalloutArrow seed={641} vertical />
             {c2}
           </span>

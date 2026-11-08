@@ -86,7 +86,7 @@ export const en: Dict = {
       },
       {
         period: '08.2024–present',
-        org: 'KORSOFT',
+        org: 'CORESOFT',
         points: [
           'Company landing pages with child pages',
           'Educational web system on Moodle',

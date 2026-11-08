@@ -800,6 +800,16 @@
 
 /* ---------- Футер ---------- */
 
+/* Подложка таблицы изменений (лист 07): рисованный полигон с редкой
+   hachure-заливкой за всей таблицей; текст — positioned, поверх оверлея. */
+.changelog-board {
+  position: relative;
+}
+
+.changelog-board table {
+  position: relative;
+}
+
 .footer-sheet table {
   width: 100%;
   border-collapse: collapse;
@@ -831,7 +841,8 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
+  /* Запас от нижней кромки hachure-подложки таблицы (paddingY 18 + jitter). */
+  margin-top: 30px;
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--muted);
@@ -893,12 +904,23 @@
   gap: var(--s3);
 }
 
-.diploma-card__thumb {
+/* Медиабокс несёт пропорцию 3/4 и hachure-заливку-полигон (rough `polygon`,
+   seeds 320+) — «заполнение цветом» позади скана: скан непрозрачный,
+   штриховка читается в полях letterbox'а. Позиционирование — по той же
+   причине, что и у tech-tile: in-flow картинка красится над z:0-оверлеем. */
+.diploma-card__media {
+  position: relative;
   aspect-ratio: 3 / 4;
-  object-fit: contain;
-  background: var(--surface);
   padding: var(--s0);
+}
+
+.diploma-card__thumb {
+  position: relative;
   width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border: 1px solid var(--grid-major);
+  filter: saturate(0.85);
 }
 
 .diploma-card__caption {
@@ -911,9 +933,13 @@
   grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
   gap: var(--s2);
   padding-top: var(--s1);
+  position: relative;
 }
 
+/* Плитка — positioned: иначе in-flow иконка красится под z:0-оверлеем
+   штриховки и hachure ложится поверх картинки. */
 .tech-tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -921,17 +947,35 @@
   gap: 4px;
   min-height: 124px;
   padding: 12px 14px;
-  transition: background-color 0.25s ease-out;
+}
+
+/* Полигон-штриховка (rough `polygon`, seeds 130+) рисуется при маунте,
+   по ховеру-тоглу проявляется только opacity (§6.1: 150–200ms). */
+.tech-tile > svg.rough-overlay {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+}
+
+.tech-tile--pin > svg.rough-overlay {
+  opacity: 1;
 }
 
 .tech-tile img {
   height: 76px;
   width: auto;
   filter: saturate(0.9) contrast(1.1);
+  transition: transform 0.18s ease-out;
+}
+
+/* Зажатая плитка: иконка укрупняется, подпись — крупнее и жирнее.
+   Резерв строк подписи (15px) не меняется — рамки сетки не съезжают. */
+.tech-tile--pin img {
+  transform: scale(1.16);
 }
 
 /* Подпись всегда резервирует строку (рамки сетки не съезжают),
-   проявляется вместе с оранжевой заливкой по наведению-тоглу. */
+   проявляется вместе с оранжевой заливкой по наведению-тоглу.
+   На штриховке accent-текст тонет — в зажатой плитке он чернильный. */
 .tech-tile__name {
   height: 15px;
   font-family: var(--font-mono);
@@ -941,14 +985,15 @@
   color: var(--accent);
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 0.2s ease-out;
-}
-
-.tech-tile--pin {
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  transition:
+    opacity 0.2s ease-out,
+    font-size 0.18s ease-out;
 }
 
 .tech-tile--pin .tech-tile__name {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
   opacity: 1;
 }
 
@@ -1191,7 +1236,11 @@
     linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
     linear-gradient(var(--grid-major) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
-  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+  background-size:
+    8px 8px,
+    8px 8px,
+    40px 40px,
+    40px 40px;
 }
 
 /* Размытая маска телефона: понятно, что под «штампом» скрыто раскрытие. */
@@ -1507,11 +1556,16 @@
   letter-spacing: 0.03em;
 }
 
-/* --- светлый фон фигуры: штриховка за портретом --- */
+/* --- светлый фон фигуры: полигон-штриховка за портретом ---
+   Геометрия = окну осциллографа тёмной темы (82%×88% при left 12%/top 6%),
+   иначе «свечение» уезжает на ~50px левее и наезжает на фамилию. */
 .light-hatch {
   position: absolute;
-  inset: 0;
   z-index: 0;
+  width: 82%;
+  height: 88%;
+  left: 12%;
+  top: 6%;
 }
 
 /* --- выноски: rough-стрелки --- */

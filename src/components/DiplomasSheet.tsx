@@ -36,6 +36,20 @@ function DiplomaCard({
   onOpen(f: string): void;
 }) {
   const frameRef = useRough<HTMLButtonElement>('frame', 300 + index, () => ({ padding: 6 }));
+  // «Заполнение цветом» у картинок (прил. А): hachure-полигон позади скана,
+  // читается в полях letterbox'а (скан непрозрачный). Seeds 320+i — серия
+  // заливок дипломов (спека §4.9).
+  const mediaRef = useRough<HTMLDivElement>('polygon', 320 + index, () => ({
+    colorKey: 'accent',
+    padding: 0,
+    jitter: 6,
+    roughness: 2,
+    fillStyle: 'hachure',
+    hachureGap: 11,
+    hachureAngle: -41,
+    strokeWidth: 1,
+    opacity: 0.4,
+  }));
   const preview = certPreviews[`../assets/certs/${item.file}.webp`];
   const previewAvif = certPreviewsAvif[`../assets/certs/${item.file}.avif`];
 
@@ -47,21 +61,23 @@ function DiplomaCard({
       onClick={() => onOpen(item.file)}
       aria-label={`${openAria}: ${item.caption}`}
     >
-      {preview && (
-        <picture>
-          {previewAvif && <source type="image/avif" srcSet={previewAvif} />}
-          <img
-            className="diploma-card__thumb"
-            src={preview}
-            alt={item.caption}
-            width={600}
-            height={424}
-            loading="lazy"
-            decoding="async"
-            fetchPriority="low"
-          />
-        </picture>
-      )}
+      <div className="diploma-card__media" ref={mediaRef}>
+        {preview && (
+          <picture>
+            {previewAvif && <source type="image/avif" srcSet={previewAvif} />}
+            <img
+              className="diploma-card__thumb"
+              src={preview}
+              alt={item.caption}
+              width={600}
+              height={424}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+            />
+          </picture>
+        )}
+      </div>
       <span className="diploma-card__caption">
         <b>
           {docLabel} {String(index + 1).padStart(2, '0')}
@@ -92,7 +108,13 @@ export function DiplomasSheet() {
   const openCaption = t.diplomas.items.find((i) => i.file === openFile)?.caption;
 
   return (
-    <Sheet id="sheet-06" titleId="sheet-06-title" kicker={t.diplomas.kicker} title={t.diplomas.title} dense>
+    <Sheet
+      id="sheet-06"
+      titleId="sheet-06-title"
+      kicker={t.diplomas.kicker}
+      title={t.diplomas.title}
+      dense
+    >
       <div className="diploma-grid">
         {t.diplomas.items.map((item, i) => (
           <DiplomaCard

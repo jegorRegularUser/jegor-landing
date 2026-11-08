@@ -9,6 +9,7 @@ export type RoughKind =
   | 'silhouette'
   | 'hachure-fill'
   | 'path'
+  | 'polygon'
   | 'multi-frame';
 
 export type ColorKey = 'ink' | 'muted' | 'accent' | 'accent2';
@@ -22,6 +23,10 @@ export interface RoughOpts {
   bowing?: number;
   /** Отступ рамки от границ target, px. */
   padding?: number;
+  /** Для polygon: отступ в стороны (по умолчанию = padding). */
+  paddingX?: number;
+  /** Для polygon: отступ по вертикали (по умолчанию = padding). */
+  paddingY?: number;
   /** Путь для silhouette (viewBox 1000, длинная сторона). */
   d?: string;
   fillStyle?: 'hachure' | 'cross-hatch' | 'solid' | 'zigzag';
@@ -33,6 +38,10 @@ export interface RoughOpts {
   scaleW?: number;
   /** Для multi-frame: элементы, вокруг которых рисуются рамки. */
   targets?: Element[];
+  /** Для polygon: амплитуда джиттера вершин, px (детерминирована seed'ом). */
+  jitter?: number;
+  /** Для polygon: прозрачность подложки (фон не должен глушить контент). */
+  opacity?: number;
 }
 
 interface Entry {
@@ -71,10 +80,26 @@ const KIND_DEFAULTS: Record<RoughKind, { roughness: number; strokeWidth: number 
   arrow: { roughness: 1.5, strokeWidth: 1.5 },
   'hachure-fill': { roughness: 1.8, strokeWidth: 0 },
   path: { roughness: 1.6, strokeWidth: 2.5 },
+  polygon: { roughness: 2, strokeWidth: 1.5 },
   'multi-frame': { roughness: 1.4, strokeWidth: 1.5 },
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * mulberry32: детерминированный PRNG от seed. Джиттер вершин полигона —
+ * часть геометрии, поэтому обязан воспроизводиться same-seed redraw'ом
+ * (§6.5) наравне с внутренним рандомом rough.
+ */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /**
  * Разворот дельты в локальные координаты, если mount сейчас повёрнут
@@ -132,10 +157,12 @@ function drawEntry(entry: Entry): void {
   // бокса — рамка уезжала бы вниз втрое относительно верха.
   const local = localOffset(target, mount);
   const size = layoutSize(target);
-  const [dx, dy] = local ?? (() => {
-    const targetRect = target.getBoundingClientRect();
-    return unrotate(targetRect.left - mountRect.left, targetRect.top - mountRect.top, mount);
-  })();
+  const [dx, dy] =
+    local ??
+    (() => {
+      const targetRect = target.getBoundingClientRect();
+      return unrotate(targetRect.left - mountRect.left, targetRect.top - mountRect.top, mount);
+    })();
   const w = size?.w ?? target.getBoundingClientRect().width;
   const h = size?.h ?? target.getBoundingClientRect().height;
 
@@ -252,6 +279,50 @@ function drawEntry(entry: Entry): void {
       svg.appendChild(g);
       break;
     }
+    case 'polygon': {
+      // Рисованный многоугольник-подложка (фон листа): углы target, растянутые
+      // в неправильный «вырезанный» контур. 8 вершин (углы + середины сторон),
+      // каждая сдвинута детерминированным джиттером; roughness добавляет
+      // карандашную дрожь линии сверху. Заливка — hachure по канону спеки.
+      // paddingX/paddingY — раздельные отступы (по умолчанию = padding):
+      // подложке таблицы листа 07 нужен запас в стороны, не по вертикали.
+      const j = Math.abs(opts.jitter ?? 0);
+      const rand = mulberry32(seed);
+      const padX = opts.paddingX ?? pad;
+      const padY = opts.paddingY ?? pad;
+      const x0 = dx - padX;
+      const y0 = dy - padY;
+      const x1 = dx + w + padX;
+      const y1 = dy + h + padY;
+      const xm = (x0 + x1) / 2;
+      const ym = (y0 + y1) / 2;
+      const off = () => (rand() * 2 - 1) * j;
+      const pts: [number, number][] = [
+        [x0, y0],
+        [xm, y0],
+        [x1, y0],
+        [x1, ym],
+        [x1, y1],
+        [xm, y1],
+        [x0, y1],
+        [x0, ym],
+      ].map(([px, py]) => [px + off(), py + off()]);
+      const drawable = rc.polygon(pts, {
+        seed,
+        roughness: opts.roughness ?? defaults.roughness,
+        bowing: opts.bowing ?? 1,
+        stroke: color,
+        strokeWidth: opts.strokeWidth ?? defaults.strokeWidth,
+        fill: color,
+        fillStyle: opts.fillStyle ?? 'hachure',
+        hachureGap: opts.hachureGap,
+        hachureAngle: opts.hachureAngle,
+        fillWeight: opts.strokeWidth,
+      });
+      if (opts.opacity !== undefined) drawable.style.opacity = String(opts.opacity);
+      append(drawable);
+      break;
+    }
     case 'multi-frame': {
       // Много рамок одним оверлеем (лента чипов): дешево по DOM.
       for (const t of opts.targets ?? []) {
@@ -299,6 +370,9 @@ function drawEntry(entry: Entry): void {
   }
 
   svg.dataset.color = color;
+  // Повторная регистрация на том же узле (StrictMode-ремоунт, keepSvg-сценарии):
+  // старые оверлеи снимаем, чтобы не копились слоями.
+  mount.querySelectorAll(':scope > .rough-overlay').forEach((oldSvg) => oldSvg.remove());
   mount.prepend(svg);
   entry.svg = svg;
   entry.color = color;
@@ -340,10 +414,12 @@ export function registerRough(
   registry.set(mount, entry);
 }
 
-export function unregisterRough(mount: HTMLElement): void {
+export function unregisterRough(mount: HTMLElement, keepSvg = false): void {
   const entry = registry.get(mount);
   if (!entry) return;
-  entry.svg.remove();
+  // keepSvg: узел уходит из DOM (кнопка отрывается в физику), но её клон
+  // должен унести рисованный оверлей с собой — не срезаем его.
+  if (!keepSvg) entry.svg.remove();
   registry.delete(mount);
 }
 

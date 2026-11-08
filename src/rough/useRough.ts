@@ -19,7 +19,9 @@ export function useRough<T extends HTMLElement>(
     const el = ref.current;
     if (!el) return;
     registerRough(el, kind, seed, optsFactory?.() ?? {});
-    return () => unregisterRough(el);
+    // keepSvg: оверлей должен выжить, если узел уходит из DOM в физику
+    // (кнопка темы отрывается — клон уносит обводку с собой).
+    return () => unregisterRough(el, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return ref;

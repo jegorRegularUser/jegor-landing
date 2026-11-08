@@ -25,9 +25,53 @@ function iconFor(label: string, theme: 'dark' | 'light'): string | undefined {
   return set[`../assets/tech-icons${theme === 'dark' ? '-dark' : ''}/${slug}.png`];
 }
 
+/** Оранжевый полигон-подложка плитки (ревизия 06): рисованный контур +
+ *  hachure-заливка, рисуется при маунте, проявляется только по ховеру —
+ *  тогл класса .tech-tile--pin управляет opacity оверлея (CSS, §6.1).
+ *  Seeds 130+i — серия hover-заливок чипов (спека §4.9). */
+function TechTile({
+  label,
+  index,
+  pinned,
+  onPin,
+  icon,
+}: {
+  label: string;
+  index: number;
+  pinned: boolean;
+  onPin(): void;
+  icon?: string;
+}) {
+  const fillRef = useRough<HTMLSpanElement>('polygon', 130 + index, () => ({
+    colorKey: 'accent',
+    padding: 0,
+    jitter: 6,
+    roughness: 2,
+    fillStyle: 'hachure',
+    hachureGap: 8,
+    hachureAngle: -41,
+    strokeWidth: 1,
+    opacity: 0.55,
+  }));
+  return (
+    <span
+      ref={fillRef}
+      className={`tech-tile${pinned ? ' tech-tile--pin' : ''}`}
+      title={label}
+      onPointerEnter={onPin}
+    >
+      {icon && <img src={icon} alt={label} height={76} loading="lazy" decoding="async" />}
+      <span className="tech-tile__name" aria-hidden="true">
+        {label}
+      </span>
+    </span>
+  );
+}
+
 /**
- * ЛИСТ 03 — Технологии (ревизия 04): «перечень элементов» — сетка огромных
- * иконок. Наведение — тогл: плитка заливается оранжевым и подписывается,
+ * ЛИСТ 03 — Технологии (ревизия 06): «перечень элементов» — сетка огромных
+ * иконок; наведение — тогл: плитка заливается оранжевой hachure-штриховкой
+ * рисованного полигона (kind `polygon`, seeds 130+) и подписывается,
  * состояние остаётся до следующего наведения. Имя живёт в alt и тултипе.
  * Подпись всегда резервирует строку — рамки сетки не съезжают.
  */
@@ -85,24 +129,16 @@ export function TechSheet() {
           if (el) tilesRef.current = Array.from(el.querySelectorAll<HTMLElement>('.tech-tile'));
         }}
       >
-        {t.tech.chips.map((label) => {
-          const icon = iconFor(label, theme);
-          return (
-            <span
-              key={label}
-              className={`tech-tile${pinned.has(label) ? ' tech-tile--pin' : ''}`}
-              title={label}
-              onPointerEnter={() => togglePin(label)}
-            >
-              {icon && (
-                <img src={icon} alt={label} height={76} loading="lazy" decoding="async" />
-              )}
-              <span className="tech-tile__name" aria-hidden="true">
-                {label}
-              </span>
-            </span>
-          );
-        })}
+        {t.tech.chips.map((label, i) => (
+          <TechTile
+            key={label}
+            label={label}
+            index={i}
+            pinned={pinned.has(label)}
+            onPin={() => togglePin(label)}
+            icon={iconFor(label, theme)}
+          />
+        ))}
       </div>
       <PencilMark text={t.tech.pencil} style={{ bottom: '6px', right: '10%' }} />
     </Sheet>
