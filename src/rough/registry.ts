@@ -355,6 +355,15 @@ export function redrawAll(): void {
   }
 }
 
+/** Перерисовка ОДНОГО оверлея (анимация карточек оси: рамка следует за
+ *  размером карточки, остальные оверлеи не трогаем). */
+export function redrawMount(mount: HTMLElement): void {
+  const entry = registry.get(mount);
+  if (!entry) return;
+  entry.svg.remove();
+  drawEntry(entry);
+}
+
 /**
  * Смена темы без регенерации (спека §6.3): заменяем в атрибутах path'ов
  * старый цвет на свежий из CSS-переменных. Rough пишет цвет hachure-заливки

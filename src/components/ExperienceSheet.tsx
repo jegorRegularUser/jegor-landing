@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from '../lib/gsap';
 import { annotate } from 'rough-notation';
+import { redrawMount } from '../rough/registry';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import { useMedia } from '../hooks/useMedia';
@@ -32,7 +33,7 @@ function ExperienceNode({ seed, index, now, accent }: {
       padding: 8,
       colorKey: accent ? 'accent' : 'ink',
     }),
-    [open],
+    [],
   );
   const orgRef = useRef<HTMLHeadingElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -49,14 +50,18 @@ function ExperienceNode({ seed, index, now, accent }: {
   }, [open]);
 
   // Тело живёт в DOM всегда: открытие — рост height + проявление,
-  // закрытие — схлопывание (раньше оно исчезало рывком, без анимации).
+  // закрытие — схлопывание. Рамка следует за размером карточки: на каждом
+  // кадре анимации перерисовываем её оверлей тем же seed'ом.
   useLayoutEffect(() => {
     const el = bodyRef.current;
+    const node = ref.current;
     if (!el) return;
+    const syncFrame = () => node && redrawMount(node);
     if (reduced) {
       el.style.height = open ? 'auto' : '0px';
       el.style.overflow = 'hidden';
       el.style.opacity = open ? '1' : '0';
+      syncFrame();
       return;
     }
     gsap.killTweensOf(el);
@@ -69,9 +74,11 @@ function ExperienceNode({ seed, index, now, accent }: {
           autoAlpha: 1,
           duration: 0.5,
           ease: 'power3.out',
+          onUpdate: syncFrame,
           onComplete: () => {
             el.style.height = 'auto';
             el.style.overflow = '';
+            syncFrame();
           },
         },
       );
@@ -82,6 +89,8 @@ function ExperienceNode({ seed, index, now, accent }: {
         overflow: 'hidden',
         duration: 0.32,
         ease: 'power3.in',
+        onUpdate: syncFrame,
+        onComplete: syncFrame,
       });
     }
   }, [open, reduced]);

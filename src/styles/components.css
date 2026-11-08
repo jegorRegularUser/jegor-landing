@@ -189,9 +189,9 @@
 @media (min-width: 1024px) {
   .hero {
     grid-template-columns: 50% 50%;
-    /* Титул ровно во вьюпорт: минус шапка (var в base.css) и минус рамки
-       и пэдинги листа (16+2+3+40 ≈ 62px, см. sheets.css .sheet--hero). */
-    min-height: calc(100svh - var(--header-h) - 62px);
+    /* Титул ровно во вьюпорт: минус шапка (var в base.css) и минус рамки,
+       пэдинги и обвязку листа (замер: 85px, см. sheets.css .sheet--hero). */
+    min-height: calc(100svh - var(--header-h) - 105px);
   }
 }
 

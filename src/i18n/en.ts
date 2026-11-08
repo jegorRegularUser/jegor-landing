@@ -228,7 +228,7 @@ export const en: Dict = {
     },
     phoneNote: 'NOT PUBLISHED',
     telLabel: 'TEL',
-    phoneMask: '+7 (•••) •••-••-••',
+    phoneMask: '+7 (all) not_so_simple',
     reveal: 'REVEAL',
     copy: 'COPY',
     copied: 'COPIED',
@@ -241,8 +241,9 @@ export const en: Dict = {
     kicker: 'SHEET 07 / CHANGE LOG',
     head: { izm: 'REV.', sheets: 'SHEETS', content: 'CONTENT', date: 'DATE' },
     rows: [
-      { izm: '01', sheets: 'all', content: 'drawing set 2026-F1 released', date: '11.2026' },
-      { izm: '02', sheets: 'all', content: 'revision per acceptance results', date: '11.2026' },
+      { izm: '01', sheets: 'all', content: 'drawing set 2026-F1 released', date: '07.11.2026' },
+      { izm: '02', sheets: 'all', content: 'revision per acceptance results', date: '07.11.2026' },
+      { izm: '03', sheets: '00, 01, 02', content: 'style fixes: title sheet, assembly rail, elements list', date: '08.11.2026' },
     ],
     dynamic: {
       theme: 'REV. applied: blueprint ↔ vellum',
