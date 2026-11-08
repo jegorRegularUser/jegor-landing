@@ -179,7 +179,12 @@ export const en: Dict = {
         tags: ['Next.js', 'TypeScript', 'Yandex API', 'Overpass API'],
         demo: 'https://jegors-intelligent-trails.vercel.app',
         repo: 'https://github.com/jegorRegularUser/intelligent-trails',
-        screens: ['intelligent-trails-en', 'intelligent-trails-2-en', 'intelligent-trails-5-en', 'intelligent-trails-3-en'],
+        screens: [
+          'intelligent-trails-en',
+          'intelligent-trails-2-en',
+          'intelligent-trails-5-en',
+          'intelligent-trails-3-en',
+        ],
         status: 'ready' as const,
       },
       {
@@ -246,7 +251,12 @@ export const en: Dict = {
     rows: [
       { izm: '01', sheets: 'all', content: 'drawing set 2026-F1 released', date: '07.11.2026' },
       { izm: '02', sheets: 'all', content: 'revision per acceptance results', date: '07.11.2026' },
-      { izm: '03', sheets: '00, 01, 02', content: 'style fixes: title sheet, assembly rail, elements list', date: '08.11.2026' },
+      {
+        izm: '03',
+        sheets: '00, 01, 02',
+        content: 'style fixes: title sheet, assembly rail, elements list',
+        date: '08.11.2026',
+      },
       { izm: '04', sheets: '03', content: 'new Borrowed Vessels description', date: '08.11.2026' },
     ],
     dynamic: {

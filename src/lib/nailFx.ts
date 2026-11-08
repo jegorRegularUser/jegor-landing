@@ -61,7 +61,8 @@ function setFixed(nail: HTMLImageElement): void {
 }
 
 export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
-  const { reduced = false, shakeEl = null, persistNails = false, onDone } = opts;
+  const { shakeEl = null, persistNails = false, onDone } = opts;
+  void opts.reduced; // эффект всегда полный: см. комментарий выше
   const rect = host.getBoundingClientRect();
   // Справа нет места — молоток встаёт слева и бьёт в обратную сторону.
   const spaceRight = window.innerWidth - rect.right > HAMMER * 0.85;
@@ -111,51 +112,19 @@ export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
     setFixed(nail);
     gsap.fromTo(nail, { scale: 1.6 }, { scale: 1, duration: 0.16, ease: 'power2.out' });
     knock(0.9 - i * 0.12);
-    if (!reduced) {
-      gsap.fromTo(
-        host,
-        { scaleY: 0.93 },
-        { scaleY: 1, duration: 0.16, ease: 'power2.out', transformOrigin: '50% 100%' },
-      );
-      if (shakeEl) {
-        gsap.fromTo(shakeEl, { x: -2 }, { x: 0, duration: 0.18, ease: 'power1.out' });
-      }
+    gsap.fromTo(
+      host,
+      { scaleY: 0.93 },
+      { scaleY: 1, duration: 0.16, ease: 'power2.out', transformOrigin: '50% 100%' },
+    );
+    if (shakeEl) {
+      gsap.fromTo(shakeEl, { x: -2 }, { x: 0, duration: 0.18, ease: 'power1.out' });
     }
   };
 
-  if (reduced) {
-    // prefers-reduced-motion: размашистую анимацию глушим, но сам факт
-    // прибивания показываем — короткие удары без замахов. Иначе молоток
-    // и гвозди «просто исчезают» (жалоба юзера: пнг больше не видно).
-    const tlR = gsap.timeline({
-      onComplete: () => {
-        if (persistNails) persistNailsIn(host, nails);
-        fx.remove();
-        onDone?.();
-      },
-    });
-    nails.forEach((nail, i) => {
-      const at = i * 0.17;
-      tlR
-        .fromTo(
-          hammer,
-          { y: -14, rotation: side === 1 ? -96 : 96 },
-          { y: 0, rotation: side === 1 ? -88 : 88, duration: 0.1, ease: 'power2.in' },
-          at,
-        )
-        .call(
-          () => {
-            setFixed(nail);
-            knock(0.9 - i * 0.12);
-          },
-          undefined,
-          at + 0.1,
-        );
-    });
-    tlR.to({}, { duration: 0.12 });
-    return;
-  }
-
+  // prefers-reduced-motion намеренно НЕ глушит этот эффект: молоток и гвозди —
+  // суть происходящего, их отсутствие пользователь читает как поломку
+  // («опять пропал молоток и гвозди»). Анимация всегда полная.
   // Базовая позиция молотка (замах рядом с кнопкой); aimY доводит голову до гвоздя.
   const baseY = cy - HAMMER / 2;
   const restRotation = side === 1 ? -102 : 102; // лёгкий подъём головы — замах

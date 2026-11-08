@@ -84,6 +84,8 @@ interface PieceMeta {
   prevSpeed: number;
   /** Сколько тиков кусок с pendingShatter пролежал почти неподвижно. */
   restTicks?: number;
+  /** Сколько тиков подряд кусок выглядит «мёртвым» (watchdog). */
+  deadTicks?: number;
 }
 
 const SPLIT_SPEED = 9; // скорость докалывания осколка уровня 0
@@ -189,7 +191,10 @@ function voronoiInBox(minX: number, minY: number, w: number, h: number, n: numbe
   if (w < 30 || h < 18) return [];
   const pad = 0.18;
   const pts: Pt[] = [
-    { x: minX + w / 2 + (Math.random() - 0.5) * w * 0.2, y: minY + h / 2 + (Math.random() - 0.5) * h * 0.2 },
+    {
+      x: minX + w / 2 + (Math.random() - 0.5) * w * 0.2,
+      y: minY + h / 2 + (Math.random() - 0.5) * h * 0.2,
+    },
   ];
   for (let i = 0; i < n; i += 1) {
     pts.push({
@@ -275,6 +280,14 @@ export async function createPlayground(
   };
   window.addEventListener('mousemove', onStuckButtonMove);
   window.addEventListener('blur', onWindowBlur);
+  // Курсор ушёл из окна: mouseup за его пределами до Matter не доходит, и
+  // кусок остаётся приклеен к невидимой пружине в воздухе — «застыла
+  // посреди экрана и не сдвинуть» (курсор-то за окном, события не идут).
+  // Уход курсора = принудительный релиз, кусок падает на пол.
+  const onDocMouseLeave = (e: MouseEvent) => {
+    if (!e.relatedTarget && mouse.button === 0) mouse.mouseup(e);
+  };
+  document.documentElement.addEventListener('mouseleave', onDocMouseLeave);
   const mc = MouseConstraint.create(engine, {
     mouse,
     // 0.1 слишком мягко для тяжёлых осколков: еле ползут за мышью. Бросок
@@ -318,7 +331,7 @@ export async function createPlayground(
     // Сенсор строго по НАДВОДНОЙ части: ниже уровня экрана куски не пропадают.
     Body.setPosition(binBody, {
       x: left + w * 0.62,
-      y: top + (h * 0.45) * 0.5,
+      y: top + h * 0.45 * 0.5,
     });
   };
 
@@ -466,7 +479,11 @@ export async function createPlayground(
   };
 
   /** Цельная строка разваливается на вороной-осколки от точки контакта. */
-  const shatterPending = (body: Body, meta: PieceMeta, pair: { collision?: { supports?: { x: number; y: number }[] } }) => {
+  const shatterPending = (
+    body: Body,
+    meta: PieceMeta,
+    pair: { collision?: { supports?: { x: number; y: number }[] } },
+  ) => {
     if (!meta.src || !meta.el) return;
     const contact = pair.collision?.supports?.[0];
     const impact = contact ?? { x: body.position.x, y: body.position.y };
@@ -611,7 +628,8 @@ export async function createPlayground(
         const meta = body.plugin?.meta as PieceMeta | undefined;
         if (!meta) continue;
         if (other.plugin?.bin) {
-          // Корзина ест ВСЕ куски, обработчик живёт до destroy (был баг: снимался после первого).
+          // Корзина съедает всё, что попало в её область. Для целой кнопки это
+          // пасхалка 16: фан-ошибка (BSOD) и перезагрузка страницы.
           onBinEnter?.(meta.el);
           swallowPiece(body, other);
           continue;
@@ -659,6 +677,60 @@ export async function createPlayground(
         mp.y = cy2;
       }
     }
+    // --- watchdog «мёртвых» состояний --------------------------------------
+    // Четыре раунда багов сводились к одному: кусок оказывается в состоянии,
+    // из которого движок его сам не вытягивает — висит в воздухе без единого
+    // контакта (упал «на бок», подскочил и замер), застревает в стене
+    // вопреки клэмпу или вообще выпадает из мира. Раз в тик проверяем
+    // здравомыслие каждой детали и возвращаем её в игру.
+    const worldBodies = new Set(Composite.allBodies(engine.world));
+    const pairList =
+      (engine.pairs as unknown as { list?: { isActive?: boolean; bodyA: Body; bodyB: Body }[] })
+        .list ?? [];
+    for (const body of pieces) {
+      const meta = body.plugin.meta as PieceMeta | undefined;
+      if (!meta) continue;
+      // держимый мышью кусок «мёртвым» не считаем: стоит в руке — норма
+      if (mc.body === body) {
+        meta.deadTicks = 0;
+        continue;
+      }
+      let contact = false;
+      for (const pair of pairList) {
+        if (pair.isActive && (pair.bodyA === body || pair.bodyB === body)) {
+          contact = true;
+          break;
+        }
+      }
+      const outOfWorld = !worldBodies.has(body);
+      const beyondWall =
+        body.bounds.max.y > H() + 10 ||
+        body.bounds.min.y < -10 ||
+        body.bounds.max.x > W() + 10 ||
+        body.bounds.min.x < -10;
+      const floating =
+        !contact &&
+        body.speed < 0.2 &&
+        Math.abs(body.angularVelocity) < 0.02 &&
+        body.bounds.max.y < H() - 12;
+      if (outOfWorld || floating || beyondWall) {
+        meta.deadTicks = (meta.deadTicks ?? 0) + 1;
+      } else {
+        meta.deadTicks = 0;
+      }
+      // выпал из мира — вернуть немедленно; висит/застрял — после 0.5с
+      if ((meta.deadTicks ?? 0) > (outOfWorld ? 2 : 30)) {
+        if (!worldBodies.has(body)) Composite.add(engine.world, body);
+        if (meta.el) meta.el.classList.remove('physics-piece--grab');
+        meta.grabScale = 1;
+        meta.restTicks = 0;
+        meta.deadTicks = 0;
+        Body.setPosition(body, { x: W() / 2, y: Math.max(60, H() * 0.25) });
+        Body.setVelocity(body, { x: 0, y: 0 });
+        Body.setAngularVelocity(body, 0);
+      }
+    }
+
     for (const body of pieces) {
       const meta = body.plugin.meta as PieceMeta | undefined;
       if (meta) meta.prevSpeed = body.speed;
@@ -667,11 +739,7 @@ export async function createPlayground(
       // шаттер-порог не берётся — строка остаётся целой навсегда. Пролежала
       // ~0.7с почти неподвижно (и её не держат) — рассыпаемся на месте.
       if (meta?.pendingShatter) {
-        if (
-          mc.body !== body &&
-          body.speed < 0.6 &&
-          Math.abs(body.angularVelocity) < 0.02
-        ) {
+        if (mc.body !== body && body.speed < 0.6 && Math.abs(body.angularVelocity) < 0.02) {
           meta.restTicks = (meta.restTicks ?? 0) + 1;
           if (meta.restTicks > 42) {
             shatterPending(body, meta, {
@@ -687,7 +755,10 @@ export async function createPlayground(
       }
       // угловое затухание и общий кап скорости — против «юлы» и тоннелей
       if (Math.abs(body.angularVelocity) > 0.001) {
-        Body.setAngularVelocity(body, body.angularVelocity * 0.97);
+        Body.setAngularVelocity(body, body.angularVelocity * 0.94);
+      }
+      if (Math.abs(body.angularVelocity) > 0.25) {
+        Body.setAngularVelocity(body, 0.25 * Math.sign(body.angularVelocity));
       }
       const sp = Math.hypot(body.velocity.x, body.velocity.y);
       if (sp > 42) {
@@ -698,11 +769,7 @@ export async function createPlayground(
     // страховка от убеговших (тоннель/вырожденный полигон)
     let escaped: Body | null = null;
     for (const body of pieces) {
-      if (
-        body.position.y > H() + 3000 ||
-        body.position.x < -3000 ||
-        body.position.x > W() + 3000
-      ) {
+      if (body.position.y > H() + 3000 || body.position.x < -3000 || body.position.x > W() + 3000) {
         escaped = body;
         break;
       }
@@ -797,7 +864,8 @@ export async function createPlayground(
     if (pb) {
       const arm = Math.hypot(pb.x, pb.y);
       const maxArm = 48;
-      if (arm > maxArm) mc.constraint.pointB = { x: (pb.x * maxArm) / arm, y: (pb.y * maxArm) / arm };
+      if (arm > maxArm)
+        mc.constraint.pointB = { x: (pb.x * maxArm) / arm, y: (pb.y * maxArm) / arm };
     }
   });
 
@@ -826,7 +894,7 @@ export async function createPlayground(
     // крутится; вращение ленивое (инерция утяжелена) — не «юла».
     const spin =
       (grabOffset.x * vy - grabOffset.y * vx) / (320 + grabOffset.x ** 2 + grabOffset.y ** 2);
-    Body.setAngularVelocity(body, Math.max(-0.3, Math.min(0.3, spin)));
+    Body.setAngularVelocity(body, Math.max(-0.22, Math.min(0.22, spin)));
     // Отпустил в зоне слота — прибиваем сразу, не дожидаясь остановки:
     // на подлёте кусок слишком быстр, и триггер «почти стоит» его пропускает.
     if (body === nailBody && nailArmed && anchorRect) {
@@ -854,6 +922,8 @@ export async function createPlayground(
   let anchorRect: DOMRect | null = null;
   let nailing = false;
   let anchorScanRaf = 0;
+  // Страховка зависшего FX прибивания (см. beginNailing).
+  let nailFallbackTimer = 0;
   // Кусок рождается ровно на слоте — без этих флагов он «прибивается» сам
   // в момент спавна. Молоток включается, только если кусок схватили и унесли.
   let nailGrabbed = false;
@@ -896,12 +966,23 @@ export async function createPlayground(
       y: ty,
       rotation: 0,
       scale: 1,
-      duration: reduced ? 0.01 : 0.42,
+      // Полёт к слоту всегда видимый: reduced-motion его не глушит —
+      // мгновенный перенос выглядел как «кнопка исчезла».
+      duration: 0.42,
       ease: 'back.out(1.4)',
       onComplete: () => {
         playNailFx(meta.el, { reduced, shakeEl: scene, onDone: () => nailDone?.() });
       },
     });
+    // Страховка: если FX не отыграл (гонка/скрытая вкладка) — принудительно
+    // завершаем прибивание, иначе кнопка навсегда остаётся мёртвым куском.
+    window.clearTimeout(nailFallbackTimer);
+    nailFallbackTimer = window.setTimeout(() => {
+      if (nailing && nailDone) {
+        nailing = false;
+        nailDone();
+      }
+    }, 8000);
   };
 
   /** Тело внутри зоны слота (±56px). */
@@ -969,6 +1050,20 @@ export async function createPlayground(
         x: Math.round(b.position.x),
         y: Math.round(b.position.y),
         speed: Math.round(b.speed * 10) / 10,
+        angle: Math.round((b.angle * 180) / Math.PI),
+        av: Math.round(b.angularVelocity * 1000) / 1000,
+        minX: Math.round(b.bounds.min.x),
+        maxX: Math.round(b.bounds.max.x),
+        minY: Math.round(b.bounds.min.y),
+        maxY: Math.round(b.bounds.max.y),
+      })),
+      walls: walls.map((w) => ({
+        x: Math.round(w.position.x),
+        y: Math.round(w.position.y),
+        minX: Math.round(w.bounds.min.x),
+        maxX: Math.round(w.bounds.max.x),
+        minY: Math.round(w.bounds.min.y),
+        maxY: Math.round(w.bounds.max.y),
       })),
       bin: binBody
         ? {
@@ -1022,6 +1117,13 @@ export async function createPlayground(
         const cyw = rect.top + rect.height / 2;
         clone.style.width = `${w}px`;
         clone.style.height = `${h}px`;
+        // Ось вращения — центр, ПРИНУДИТЕЛЬНО: клон снимает inline-стили
+        // оригинала, а до отрыва по кнопке бьёт вобла GSAP с
+        // transformOrigin: 'bottom left'. С чужой осью syncShard (считает
+        // трансформ от центра) рисует кусок со смещением до ~100px при
+        // повороте: «провалилась верхом под экран», «отлетела от стены,
+        // не касаясь», «крутится сама по себе».
+        clone.style.transformOrigin = `${w / 2}px ${h / 2}px`;
         clone.style.transform = `translate3d(${cxw - w / 2}px, ${cyw - h / 2}px, 0)`;
         scene.appendChild(clone);
         const meta: PieceMeta = {
@@ -1037,15 +1139,21 @@ export async function createPlayground(
           grabScale: 1,
           prevSpeed: 0,
         };
-        const body = Bodies.rectangle(cxw, cyw, w, h, {
+        // Физическая зона шире видимого куска на 12px: на «узком носу»
+        // (кнопка встала вертикально, 33px контакта) солвер выдавал
+        // вырожденные состояния — застревание в полу и подвешивание в
+        // воздухе. Запас также упрощает захват мышью.
+        const PAD = 12;
+        const body = Bodies.rectangle(cxw, cyw, w + PAD, h + PAD, {
           restitution: opts.restitution ?? 0.6,
           friction: 0.08,
           frictionAir: 0.015,
           density: opts.density ?? 0.0028,
           plugin: { meta },
         });
-        // Утяжелённый момент инерции: кусок не крутится «юлой» от любого чиха.
-        Body.setInertia(body, body.inertia * 3);
+        // Утяжелённый момент инерции: кусок не крутится «юлой» от любого
+        // чиха и не кувыркается долго в полёте.
+        Body.setInertia(body, body.inertia * 4.5);
         if (opts.kickUp) Body.setVelocity(body, { x: 0, y: -opts.kickUp });
         pieces.add(body);
         Composite.add(engine.world, body);
@@ -1064,6 +1172,9 @@ export async function createPlayground(
           .forEach((n) => n.setAttribute('tabindex', '-1'));
         clone2.style.width = `${rect.width}px`;
         clone2.style.height = `${rect.height}px`;
+        // Ось вращения — центр (см. комментарий в solid-ветке): syncShard
+        // ведёт трансформ от (cx, cy) = (w/2, h/2).
+        clone2.style.transformOrigin = `${rect.width / 2}px ${rect.height / 2}px`;
         clone2.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0)`;
         scene.appendChild(clone2);
         const metaD: PieceMeta = {
@@ -1201,6 +1312,7 @@ export async function createPlayground(
       cancelAnimationFrame(raf);
       cancelAnimationFrame(anchorScanRaf);
       window.clearTimeout(binExitTimer);
+      window.clearTimeout(nailFallbackTimer);
       if (import.meta.env.DEV) delete (window as unknown as Record<string, unknown>).__physicsDebug;
       // Перевешанные на window слушатели мыши — иначе утекают вместе с
       // замыканием на мёртвую сцену, и движок не собирается GC.
@@ -1209,6 +1321,7 @@ export async function createPlayground(
       window.removeEventListener('mousedown', mouse.mousedown);
       window.removeEventListener('mousemove', onStuckButtonMove);
       window.removeEventListener('blur', onWindowBlur);
+      document.documentElement.removeEventListener('mouseleave', onDocMouseLeave);
       window.removeEventListener('touchend', onWindowTouchEnd);
       // Поздний onDone после destroy никуда вести не должен.
       nailDone = null;

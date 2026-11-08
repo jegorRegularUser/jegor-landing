@@ -180,7 +180,12 @@ export const ru = {
         tags: ['Next.js', 'TypeScript', 'Яндекс API', 'Overpass API'],
         demo: 'https://jegors-intelligent-trails.vercel.app',
         repo: 'https://github.com/jegorRegularUser/intelligent-trails',
-        screens: ['intelligent-trails', 'intelligent-trails-2', 'intelligent-trails-5', 'intelligent-trails-3'],
+        screens: [
+          'intelligent-trails',
+          'intelligent-trails-2',
+          'intelligent-trails-5',
+          'intelligent-trails-3',
+        ],
         status: 'ready' as const,
       },
       {
@@ -245,9 +250,19 @@ export const ru = {
     kicker: 'ЛИСТ 07 / РЕГИСТРАЦИЯ ИЗМЕНЕНИЙ',
     head: { izm: 'ИЗМ.', sheets: 'ЛИСТЫ', content: 'СОДЕРЖАНИЕ', date: 'ДАТА' },
     rows: [
-      { izm: '01', sheets: 'все', content: 'выпущен комплект чертежей 2026-Ф1', date: '07.11.2026' },
+      {
+        izm: '01',
+        sheets: 'все',
+        content: 'выпущен комплект чертежей 2026-Ф1',
+        date: '07.11.2026',
+      },
       { izm: '02', sheets: 'все', content: 'ревизия по результатам приёмки', date: '07.11.2026' },
-      { izm: '03', sheets: '01, 02, 03', content: 'правка стилей: титул, монтажная ось, перечень элементов', date: '08.11.2026' },
+      {
+        izm: '03',
+        sheets: '01, 02, 03',
+        content: 'правка стилей: титул, монтажная ось, перечень элементов',
+        date: '08.11.2026',
+      },
       { izm: '04', sheets: '04', content: 'новое описание Borrowed Vessels', date: '08.11.2026' },
     ],
     dynamic: {

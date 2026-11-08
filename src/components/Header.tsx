@@ -99,11 +99,7 @@ export function Header() {
     // короткий наклон оставляем: нажатие обязано отзываться поворотом
     // (без этого кнопка кажется мёртвой — жалоба юзера).
     if (reduced) {
-      gsap.fromTo(
-        btn,
-        { rotate: -4 * s },
-        { rotate: 0, duration: 0.22, ease: 'power2.out' },
-      );
+      gsap.fromTo(btn, { rotate: -4 * s }, { rotate: 0, duration: 0.22, ease: 'power2.out' });
       return;
     }
     gsap.fromTo(
@@ -136,7 +132,11 @@ export function Header() {
         const fy = y < 7 ? y : y - (n - 7);
         const inFinder = (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
         const on = inFinder
-          ? fx === 0 || fx === 6 || fy === 0 || fy === 6 || (fx >= 2 && fx <= 4 && fy >= 2 && fy <= 4)
+          ? fx === 0 ||
+            fx === 6 ||
+            fy === 0 ||
+            fy === 6 ||
+            (fx >= 2 && fx <= 4 && fy >= 2 && fy <= 4)
           : rnd() > 0.52;
         if (on) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
       }
@@ -308,10 +308,10 @@ export function Header() {
     } else if (stage === 2) {
       void detach();
     }
-  if (stage === 1) {
-    // предзагрузка физики: к третьему клику модуль готов — отрыв без паузы
-    void import('../lib/physics').catch(() => {});
-  }
+    if (stage === 1) {
+      // предзагрузка физики: к третьему клику модуль готов — отрыв без паузы
+      void import('../lib/physics').catch(() => {});
+    }
     // stage 3: кнопка в физике, кликов нет.
   };
 

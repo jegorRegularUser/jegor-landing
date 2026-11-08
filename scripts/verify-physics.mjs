@@ -162,8 +162,10 @@ for (let toss = 1; toss <= 10; toss++) {
   }
   const dir = toss % 2 === 0 ? 1 : -1;
   await syntheticThrow(
-    Math.max(80, Math.min(1200, 640 + dir * (280 + (toss % 3) * 140))),
-    260 + (toss % 4) * 120,
+    // левый бросок целим в стену на средней высоте: кусок отскакивает в
+    // комнату и не ныряет в корзину (попадание в корзину = BSOD по дизайну)
+    Math.max(dir === 1 ? 80 : 380, Math.min(1200, 640 + dir * (280 + (toss % 3) * 140))),
+    dir === 1 ? 260 + (toss % 4) * 120 : 280 + (toss % 3) * 60,
   );
 }
 const afterToss = await readPiece();
