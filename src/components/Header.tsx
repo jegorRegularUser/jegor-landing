@@ -331,7 +331,7 @@ export function Header() {
         <div className="header__toggles">
           <button
             type="button"
-            className="toggle-btn"
+            className="toggle-btn cad-btn"
             aria-pressed={cad}
             aria-label={cad ? t.nav.cadOn : t.nav.cadOff}
             onClick={toggleCad}

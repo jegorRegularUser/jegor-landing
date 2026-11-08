@@ -158,6 +158,9 @@ export const ru = {
     next: 'Следующий кадр',
     counterAria: 'Номер кадра',
     wipStamp: 'В РАЗРАБОТКЕ',
+    zoomAria: 'Открыть кадр на весь экран',
+    close: 'ЗАКРЫТЬ',
+    soon: 'itch.io — скоро',
     pencil: 'вживую лучше',
     items: [
       {

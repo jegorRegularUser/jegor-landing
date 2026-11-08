@@ -157,6 +157,9 @@ export const en: Dict = {
     next: 'Next frame',
     counterAria: 'Frame number',
     wipStamp: 'IN DEVELOPMENT',
+    zoomAria: 'Open frame fullscreen',
+    close: 'CLOSE',
+    soon: 'itch.io — soon',
     pencil: 'better live',
     items: [
       {

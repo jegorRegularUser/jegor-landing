@@ -39,6 +39,8 @@ export interface Playground {
   fragmentize(el: HTMLElement, opts?: FragmentOptions): Body | null;
   /** Корзина-сенсор: onEnter — кусок попал внутрь, onAllGone — все убраны. */
   setBin(onEnter: (el: HTMLElement) => void, onAllGone?: () => void): void;
+  /** Тап по корзине: всосать все осколки разом. */
+  suckAll(): void;
   /** Прибить тело к слоту anchor: притаскивание рядом запускает молоток. */
   setNailBack(anchor: HTMLElement, body: Body, onDone: () => void): void;
   /** Пауза физики (невидимая вкладка). */
@@ -548,6 +550,19 @@ export async function createPlayground(
       ease: 'power2.in',
       onComplete: () => el.remove(),
     });
+  };
+
+  /** Тап по корзине: массовое всасывание всех осколков. Целые тела не едим —
+   *  канон collisionStart: цельная строка сначала обязана развалиться об пол.
+   *  onEnter (knock в контактах) НЕ дёргаем per-piece: один тап — один стук. */
+  const suckAllPieces = () => {
+    if (!binShown || binGone || !binBody) return;
+    knock(0.4);
+    for (const body of [...pieces]) {
+      const meta = body.plugin.meta as PieceMeta | undefined;
+      if (meta?.kind === 'solid') continue;
+      swallowPiece(body, binBody);
+    }
   };
 
   // --- столкновения -------------------------------------------------------
@@ -1134,7 +1149,14 @@ export async function createPlayground(
       img.src = binSrc;
       img.alt = '';
       binEl.appendChild(img);
-      scene.appendChild(binEl);
+      // Тап по корзине — массовое всасывание. Именно pointerdown, а не click:
+      // click синтезируется и при отпускании перетащенного куска НАД корзиной,
+      // а такой запуск всасывания запрещён (приёмка 08.11). pointerdown на
+      // корзину при драге не приходит — pointer занят куском.
+      binEl.addEventListener('pointerdown', suckAllPieces);
+      // Корзина ПОД кусками: иначе кнопка, лежащая в зоне корзины, прячется
+      // за её картинкой — очередное «провалилась под экран».
+      scene.insertBefore(binEl, scene.firstChild);
       // Сенсор создаётся, но В МИР НЕ ДОБАВЛЯЕТСЯ до первого захвата куска:
       // иначе летящие в левый нижний угол куски пропадают в невидимую корзину.
       binBody = Bodies.rectangle(0, 0, w * 0.62, h * 0.45 * 0.85, {
@@ -1144,6 +1166,8 @@ export async function createPlayground(
       });
       placeBin();
     },
+
+    suckAll: suckAllPieces,
 
     setNailBack(anchor, body, onDone) {
       // Повторный вызов (перезапуск эффекта, смена языка) не должен

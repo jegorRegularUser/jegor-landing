@@ -27,24 +27,35 @@ function screenFor(name: string): { webp?: string; avif?: string } {
 }
 
 /** Карусель кадров (ревизия 02): стрелки на краях картинки, полоса снизу
- *  кликабельна — клик по месту полосы открывает ближайший кадр (10.1). */
+ *  кликабельна — клик по месту полосы открывает ближайший кадр (10.1).
+ *  Тап/клик по самому кадру — лайтбокс на весь экран (как у дипломов,
+ *  §4.6); стрелки и полоса остаются рабочими. */
 function FrameCarousel({
   name,
   screens,
   seedBase,
   ariaPrev,
   ariaNext,
+  zoomAria,
+  closeLabel,
 }: {
   name: string;
   screens: string[];
   seedBase: number;
   ariaPrev: string;
   ariaNext: string;
+  zoomAria: string;
+  closeLabel: string;
 }) {
   const [index, setIndex] = useState(0);
-  const prevRef = useRough<HTMLButtonElement>('arrow', seedBase, () => ({ flip: true, padding: 10 }));
+  const prevRef = useRough<HTMLButtonElement>('arrow', seedBase, () => ({
+    flip: true,
+    padding: 10,
+  }));
   const nextRef = useRough<HTMLButtonElement>('arrow', seedBase + 1, () => ({ padding: 10 }));
   const progressRef = useRef<SVGPathElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const zoomed = screenFor(screens[index]);
 
   const go = (next: number) => {
     const clamped = Math.max(0, Math.min(screens.length - 1, next));
@@ -73,17 +84,24 @@ function FrameCarousel({
           return (
             <div className="proj-carousel__slide" key={s}>
               {shot.webp ? (
-                <picture>
-                  {shot.avif && <source type="image/avif" srcSet={shot.avif} />}
-                  <img
-                    src={shot.webp}
-                    alt={`${name} — кадр ${i + 1}`}
-                    width={1280}
-                    height={800}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </picture>
+                <button
+                  type="button"
+                  className="proj-frame-zoom"
+                  aria-label={`${zoomAria}: ${name} — кадр ${i + 1}`}
+                  onClick={() => dialogRef.current?.showModal()}
+                >
+                  <picture>
+                    {shot.avif && <source type="image/avif" srcSet={shot.avif} />}
+                    <img
+                      src={shot.webp}
+                      alt={`${name} — кадр ${i + 1}`}
+                      width={1280}
+                      height={800}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </picture>
+                </button>
               ) : (
                 <div className="proj-slot" />
               )}
@@ -126,7 +144,12 @@ function FrameCarousel({
           if (e.key === 'ArrowLeft') go(index - 1);
         }}
       >
-        <svg className="proj-progress" viewBox="0 0 300 6" preserveAspectRatio="none" aria-hidden="true">
+        <svg
+          className="proj-progress"
+          viewBox="0 0 300 6"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
           <path d="M0 3 H300" stroke="var(--grid-major)" strokeWidth="2" fill="none" />
           <path
             ref={progressRef}
@@ -140,6 +163,30 @@ function FrameCarousel({
         </svg>
         <span className="proj-carousel__num">{String(index + 1).padStart(2, '0')}</span>
       </div>
+      {/* Лайтбокс кадра (как у дипломов §4.6): клик по подложке закрывает. */}
+      <dialog
+        className="lightbox"
+        ref={dialogRef}
+        aria-label={`${name} — кадр ${index + 1}`}
+        onClick={(e) => {
+          if (e.target === dialogRef.current) dialogRef.current?.close();
+        }}
+      >
+        {zoomed.webp && (
+          <picture>
+            {zoomed.avif && <source type="image/avif" srcSet={zoomed.avif} />}
+            <img src={zoomed.webp} alt={`${name} — кадр ${index + 1}`} decoding="async" />
+          </picture>
+        )}
+        <div className="lightbox__bar">
+          <span>
+            {name} — {index + 1}/{screens.length}
+          </span>
+          <button type="button" className="toggle-btn" onClick={() => dialogRef.current?.close()}>
+            {closeLabel}
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }
@@ -183,13 +230,15 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
           <h3 className="proj-block__name">
             <b>{item.id}</b> {item.name}
           </h3>
-          {disabled && <span className="proj-block__soon">itch.io — скоро</span>}
+          {disabled && <span className="proj-block__soon">{t.projects.soon}</span>}
         </header>
         <div>
           {disabled ? (
             <div className="proj-carousel" style={{ border: 0 }}>
               <div className="proj-slot" ref={slotRef}>
-                <span className="proj-slot__wip" ref={wipRef}>{t.projects.wipStamp}</span>
+                <span className="proj-slot__wip" ref={wipRef}>
+                  {t.projects.wipStamp}
+                </span>
               </div>
             </div>
           ) : (
@@ -199,6 +248,8 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
               seedBase={600 + index * 2}
               ariaPrev={t.projects.prev}
               ariaNext={t.projects.next}
+              zoomAria={t.projects.zoomAria}
+              closeLabel={t.projects.close}
             />
           )}
         </div>
@@ -234,7 +285,12 @@ function ProjectBlock({ item, index }: { item: ProjectItem; index: number }) {
 export function ProjectsSheet() {
   const { t } = useLang();
   return (
-    <Sheet id="sheet-05" titleId="sheet-05-title" kicker={t.projects.kicker} title={t.projects.title}>
+    <Sheet
+      id="sheet-05"
+      titleId="sheet-05-title"
+      kicker={t.projects.kicker}
+      title={t.projects.title}
+    >
       {t.projects.items.map((item, i) => (
         <ProjectBlock key={item.id} item={item} index={i} />
       ))}
