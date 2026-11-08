@@ -1182,6 +1182,29 @@
   cursor: grabbing;
 }
 
+/* Осколки несут фон чертёжной бумаги (та же миллиметровка, vars темы):
+   на прозрачном фоне они выглядели невзрачными полосками. */
+.physics-shard {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px;
+}
+
+/* Размытая маска телефона: понятно, что под «штампом» скрыто раскрытие. */
+.phone-blur {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  filter: blur(5px);
+  user-select: none;
+  white-space: nowrap;
+}
+
 .physics-piece--nail {
   cursor: default;
   z-index: 3;
@@ -1228,10 +1251,9 @@
 
 .nail-fx__nail {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  top: 50%;
-  transform: translate(-50%, -50%) rotate(48deg);
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
 

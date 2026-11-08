@@ -44,7 +44,7 @@ export const ru = {
       sheet: 'ЛИСТ 0 — ЛИСТОВ 8',
       dateLabel: 'ДАТА',
     },
-    pencil: 'вырезал сам, ночью',
+    pencil: '',
     contactsAria: 'Контакты в шапке листа',
     errTodo: '// TODO: не забыть поставить градиент\n// на белой теме',
   },
@@ -68,14 +68,13 @@ export const ru = {
         years: '2023–2024',
       },
     ],
-    pencil: 'всё по паспорту',
+    pencil: 'всё настоящее',
   },
   experience: {
     kicker: 'ЛИСТ 02 / ОПЫТ',
     title: 'МОНТАЖНАЯ ОСЬ',
     nowMark: 'Н.В.',
     expandAria: 'Подробнее о месте работы',
-    pencil: 'да, двумя сразу',
     nodes: [
       {
         period: '05.2024–08.2024',
@@ -159,7 +158,7 @@ export const ru = {
     next: 'Следующий кадр',
     counterAria: 'Номер кадра',
     wipStamp: 'В РАЗРАБОТКЕ',
-    pencil: 'скрины не передают боль',
+    pencil: 'вживую лучше',
     items: [
       {
         id: '01',
@@ -229,6 +228,7 @@ export const ru = {
       href: 'https://github.com/jegorRegularUser',
     },
     telLabel: 'TEL',
+    phoneMask: '+7 (•••) •••-••-••',
     phoneNote: 'НЕ ПУБЛИКУЕТСЯ',
     reveal: 'РАСКРЫТЬ',
     copy: 'КОПИРОВАТЬ',

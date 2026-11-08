@@ -212,13 +212,16 @@ export function Header() {
     const btn = themeBtnRef.current;
     if (!btn || btn.querySelector('.nail-fx__nail')) return;
     persistNailsOn(btn);
-  }, [stage, nailed]);
+  }, [stage, nailed, themeBtnRef]);
 
   const onThemeClick = () => {
+    // Прибитая кнопка мертва: ни смены темы, ни штампа, ни вобла — гвозди держат.
+    if (nailed) {
+      knock(0.15);
+      return;
+    }
     toggleTheme();
     addChange(t.footer.dynamic.theme);
-    // Прибитая кнопка мертва как сцена: не качается и не срывается больше.
-    if (nailed) return;
     if (stage < 2) {
       const next = (stage + 1) as ThemeStage;
       setStage(next);

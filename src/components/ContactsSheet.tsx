@@ -166,7 +166,10 @@ export function ContactsSheet() {
         ))}
         <div className="stamp-grid__row" ref={phoneRowRef}>
           <span className="stamp-grid__label">{t.contacts.telLabel}</span>
-          <span className="stamp-grid__stamp-empty" aria-hidden="true" />
+          <span className="stamp-grid__stamp-empty" aria-hidden="true">
+            {/* Телефон под лёгким размытием: видно, что «РАСКРЫТЬ» что-то прячет (11). */}
+            <span className="phone-blur">{t.contacts.phoneMask}</span>
+          </span>
           <span className="stamp-grid__action">
             {phoneState === 'idle' && (
               <button type="button" className="toggle-btn" onClick={breakPhoneRow}>

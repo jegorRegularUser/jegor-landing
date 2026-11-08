@@ -1,7 +1,7 @@
 /* Полная приёмка физики в настоящем браузере (headed).
    Порядок подобран так, чтобы пасхалка с перезагрузкой была последней:
    контакты (осколки+корзина) → кнопка (бросок вправо, прибивание) → пасхалка. */
-import { chromium } from 'playwright';
+import { chromium, firefox } from 'playwright';
 import { mkdirSync } from 'node:fs';
 
 const OUT = 'verify/gui-physics';
@@ -20,7 +20,10 @@ const shot = async (page, name) => {
 };
 const log = (...a) => console.log('[check]', ...a);
 
-const browser = await chromium.launch({
+const useFF = process.env.BROWSER === 'firefox';
+const launcher = useFF ? firefox : chromium;
+log('браузер:', useFF ? 'Firefox' : 'Chromium');
+const browser = await launcher.launch({
   headless: false,
   // Окно может оказаться перекрытым другими окнами на столе — иначе Chromium
   // ставит rAF на паузу и вся физика замирает посреди сценария.
@@ -32,7 +35,7 @@ const browser = await chromium.launch({
   ],
 });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.on('pageerror', (e) => log('PAGEERROR:', String(e).slice(0, 250)));
+page.on('pageerror', (e) => log('PAGEERROR:', String(e.stack || e).slice(0, 900)));
 
 const piecePos = (sel = '.physics-piece') =>
   page.evaluate(
@@ -148,7 +151,7 @@ if (revealCount === 1) {
   });
   log('T2 bin mouth:', JSON.stringify(mouth));
   let eaten = 0;
-  for (let round = 0; round < 30; round += 1) {
+  for (let round = 0; round < 60; round += 1) {
     const shards = await page.evaluate(
       () => document.querySelectorAll('.physics-shard').length,
     );

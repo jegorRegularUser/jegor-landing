@@ -43,7 +43,7 @@ export const en: Dict = {
       sheet: 'SHEET 0 — SHEETS 8',
       dateLabel: 'DATE',
     },
-    pencil: 'cut the background myself, at night',
+    pencil: '',
     contactsAria: 'Contacts on the title sheet',
     errTodo: "// TODO: don't forget to add the gradient\n// to the light theme",
   },
@@ -67,14 +67,13 @@ export const en: Dict = {
         years: '2023–2024',
       },
     ],
-    pencil: 'straight from the passport',
+    pencil: 'all real',
   },
   experience: {
     kicker: 'SHEET 02 / EXPERIENCE',
     title: 'ASSEMBLY RAIL',
     nowMark: 'PRESENT',
     expandAria: 'More about the workplace',
-    pencil: 'yes, two at once',
     nodes: [
       {
         period: '05.2024–08.2024',
@@ -158,7 +157,7 @@ export const en: Dict = {
     next: 'Next frame',
     counterAria: 'Frame number',
     wipStamp: 'IN DEVELOPMENT',
-    pencil: "screenshots don't show the pain",
+    pencil: 'better live',
     items: [
       {
         id: '01',
@@ -229,6 +228,7 @@ export const en: Dict = {
     },
     phoneNote: 'NOT PUBLISHED',
     telLabel: 'TEL',
+    phoneMask: '+7 (•••) •••-••-••',
     reveal: 'REVEAL',
     copy: 'COPY',
     copied: 'COPIED',

@@ -1,11 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { gsap, ScrollTrigger } from '../lib/gsap';
+import { gsap } from '../lib/gsap';
 import { annotate } from 'rough-notation';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import { useMedia } from '../hooks/useMedia';
 import { Sheet } from './Sheet';
-import { PencilMark } from './PencilMark';
 
 /**
  * ЛИСТ 03 — Опыт (ревизия 04): последовательный стек карточек.
@@ -123,37 +122,7 @@ function ExperienceNode({ seed, index, now, accent }: {
 
 export function ExperienceSheet() {
   const { t } = useLang();
-  const reduced = useMedia('(prefers-reduced-motion: reduce)');
   const stageRef = useRef<HTMLDivElement>(null);
-
-  // Вход стека: карточки поднимаются по очереди, когда лист доскроллился.
-  // Паттерн AboutSheet: триггер отдельно, твин paused, onEnter играет —
-  // связка gsap.from + scrollTrigger-конфиг здесь зависала в from-состоянии.
-  useLayoutEffect(() => {
-    const stage = stageRef.current;
-    if (!stage || reduced) return;
-    const cards = stage.querySelectorAll('.exp-node');
-    const tw = gsap.from(cards, {
-      autoAlpha: 0,
-      y: 24,
-      stagger: 0.08,
-      duration: 0.5,
-      ease: 'power2.out',
-      paused: true,
-    });
-    const st = ScrollTrigger.create({
-      trigger: stage,
-      start: 'top 80%',
-      once: true,
-      onEnter: () => tw.play(),
-    });
-    // Лист уже прокручен за старт (якорь/перезагрузка) — играем сразу.
-    if (st.progress > 0 || st.isActive) tw.play();
-    return () => {
-      st.kill();
-      tw.kill();
-    };
-  }, [reduced]);
 
   return (
     <Sheet id="sheet-03" titleId="sheet-03-title" kicker={t.experience.kicker} title={t.experience.title}>
@@ -168,7 +137,6 @@ export function ExperienceSheet() {
           />
         ))}
       </div>
-      <PencilMark text={t.experience.pencil} style={{ bottom: '6px', right: '8%' }} />
     </Sheet>
   );
 }
