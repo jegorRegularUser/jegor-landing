@@ -914,11 +914,19 @@
 /* Медиабокс несёт пропорцию 3/4 и hachure-заливку-полигон (rough `polygon`,
    seeds 320+) — «заполнение цветом» позади скана: скан непрозрачный,
    штриховка читается в полях letterbox'а. Позиционирование — по той же
-   причине, что и у tech-tile: in-flow картинка красится над z:0-оверлеем. */
+   причине, что и у tech-tile: in-flow картинка красится над z:0-оверлеем.
+   На мобилке карточки стоят в ОДИН столбец — пропорция 4/3, иначе рамки
+   вытягивают лист в простыню (приёмка 08.11). */
 .diploma-card__media {
   position: relative;
   aspect-ratio: 3 / 4;
   padding: var(--s0);
+}
+
+@media (max-width: 559px) {
+  .diploma-card__media {
+    aspect-ratio: 4 / 3;
+  }
 }
 
 .diploma-card__thumb {
@@ -1009,15 +1017,21 @@
    rough-рамки multi-frame перерисовываются только на redrawAll. */
 @media (max-width: 559px) {
   .tech-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
+    /* Место под пометку «наведи — подсветится»: она уходит в поток
+       под сетку (см. #sheet-04 .pencil-mark ниже). */
+    padding-bottom: var(--s2);
   }
+  /* Квадратные ячейки: aspect-ratio держит форму — резерв подписи
+     (22px на 2 строки) остаётся ВНУТРИ квадрата, плитку не растягивает. */
   .tech-tile {
-    min-height: 96px;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
     padding: 8px 4px;
   }
   .tech-tile img {
-    height: 40px;
+    height: 44px;
   }
   .tech-tile__name {
     white-space: normal;
@@ -1029,6 +1043,14 @@
   }
   .tech-tile--pin .tech-tile__name {
     font-size: 10px;
+  }
+  /* Пометка — под сеткой, не поверх последнего ряда: static роняет
+     inline-позиционирование (bottom/right), паддинг — «небольшой запас». */
+  #sheet-04 .pencil-mark {
+    position: static;
+    display: block;
+    text-align: right;
+    padding: 10px 8px 14px 0;
   }
 }
 
@@ -1091,8 +1113,8 @@
     position: absolute;
     z-index: 0;
     width: min(78%, 430px);
-    left: auto;
-    right: 0;
+    left: 0;
+    right: auto;
     top: 0;
     margin-top: 0;
   }

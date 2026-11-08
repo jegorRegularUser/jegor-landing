@@ -539,7 +539,7 @@ export async function createPlayground(
     const v = body.velocity;
     Composite.remove(engine.world, body);
     pieces.delete(body);
-    if (pieces.size === 0) scheduleBinExit();
+    if (shardsLeft() === 0) scheduleBinExit();
     gsap.to(el, {
       x: `+=${bin.position.x - body.position.x + v.x * 12}`,
       y: `+=${bin.position.y - body.position.y + v.y * 12 + 30}`,
@@ -551,6 +551,12 @@ export async function createPlayground(
       onComplete: () => el.remove(),
     });
   };
+
+  /** Остались ли несъеденные ОСКОЛКИ. Выход корзины привязан к ним, а не к
+   *  pieces.size: цельное тело (кнопка темы в своей сцене) не должно
+   *  удерживать корзину после уборки всех осколков (приёмка 08.11). */
+  const shardsLeft = () =>
+    [...pieces].filter((b) => (b.plugin.meta as PieceMeta | undefined)?.kind === 'shard').length;
 
   /** Тап по корзине: массовое всасывание всех осколков. Целые тела не едим —
    *  канон collisionStart: цельная строка сначала обязана развалиться об пол.
@@ -721,7 +727,7 @@ export async function createPlayground(
         if (meta?.el) meta.el.remove();
         Composite.remove(engine.world, escaped);
         pieces.delete(escaped);
-        if (pieces.size === 0) scheduleBinExit();
+        if (shardsLeft() === 0) scheduleBinExit();
       }
     }
     // бросок считается по МЫШИ (она = рука, 1:1 с махом): тело-то отстаёт
