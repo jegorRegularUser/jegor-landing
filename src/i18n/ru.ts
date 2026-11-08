@@ -68,7 +68,7 @@ export const ru = {
         years: '2023–2024',
       },
     ],
-    pencil: 'всё настоящее',
+    pencil: '',
   },
   experience: {
     kicker: 'ЛИСТ 02 / ОПЫТ',

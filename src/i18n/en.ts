@@ -67,7 +67,7 @@ export const en: Dict = {
         years: '2023–2024',
       },
     ],
-    pencil: 'all real',
+    pencil: '',
   },
   experience: {
     kicker: 'SHEET 02 / EXPERIENCE',

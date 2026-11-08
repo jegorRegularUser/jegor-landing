@@ -1117,6 +1117,18 @@
     right: auto;
     top: 0;
     margin-top: 0;
+    /* Колонка + order: TODO-коммент поднимается НАД текстом исключения —
+       низ панели на мобилке накрывается портретом, верх читается целиком
+       (приёмка 08.11). Порядок: шапка → TODO → Error: … */
+    display: flex;
+    flex-direction: column;
+  }
+  .err-card > pre {
+    order: 2;
+  }
+  /* Специфичность 0-2-0 — перебивает .err-card > pre (0-1-1) выше. */
+  .err-card > .err-card__comment {
+    order: 1;
   }
   .callout.callout--city,
   .callout.callout--scale {
