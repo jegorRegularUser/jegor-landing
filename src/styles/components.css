@@ -914,16 +914,42 @@
 }
 
 .tech-tile {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   min-height: 124px;
   padding: 12px 14px;
+  transition: background-color 0.25s ease-out;
 }
 
 .tech-tile img {
   height: 76px;
   width: auto;
   filter: saturate(0.9) contrast(1.1);
+}
+
+/* Подпись всегда резервирует строку (рамки сетки не съезжают),
+   проявляется вместе с оранжевой заливкой по наведению-тоглу. */
+.tech-tile__name {
+  height: 15px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 15px;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.tech-tile--pin {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.tech-tile--pin .tech-tile__name {
+  opacity: 1;
 }
 
 /* --- фейковая ошибка React на светлой теме (забавка 8.1) ---
@@ -1189,6 +1215,25 @@
   position: fixed;
   z-index: 97;
   pointer-events: none;
+}
+
+/* Слот «ПРИБИТЬ»: спрятан, пока кнопка летит, — иначе под курсором
+   вырастает дубликат; показывается мягко через 900ms после срыва. */
+.nail-slot--wait {
+  visibility: hidden;
+}
+
+.nail-slot--in {
+  animation: nail-slot-in 0.3s ease-out;
+}
+
+@keyframes nail-slot-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .nail-fx__nail {

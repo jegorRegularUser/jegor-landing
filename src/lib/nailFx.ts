@@ -13,6 +13,8 @@ export interface NailFxOptions {
   reduced?: boolean;
   /** Слой, который мелко трясётся в момент удара (сцена физики). */
   shakeEl?: HTMLElement | null;
+  /** Оставить забитые гвозди жить в хосте (кнопка прибита намертво). */
+  persistNails?: boolean;
   onDone?: () => void;
 }
 
@@ -24,8 +26,18 @@ function setFixed(nail: HTMLImageElement): void {
   nail.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(0.82)';
 }
 
+/** Забитые гвозди переезжают из FX-слоя в сам хост: координаты совпадают
+ *  (стенд ставится ровно над хостом), гвозди живут и скроллятся вместе с ним. */
+function persistNailsIn(host: HTMLElement, nails: HTMLImageElement[]): void {
+  if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+  nails.forEach((nail, i) => {
+    nail.style.left = `${9 + i * 15}px`;
+    host.appendChild(nail);
+  });
+}
+
 export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
-  const { reduced = false, shakeEl = null, onDone } = opts;
+  const { reduced = false, shakeEl = null, persistNails = false, onDone } = opts;
   const rect = host.getBoundingClientRect();
 
   const fx = document.createElement('div');
@@ -80,6 +92,7 @@ export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
   if (reduced) {
     nails.forEach(setFixed);
     hammer.style.display = 'none';
+    if (persistNails) persistNailsIn(host, nails);
     window.setTimeout(() => {
       fx.remove();
       onDone?.();
@@ -89,6 +102,13 @@ export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
 
   const tl = gsap.timeline({
     onComplete: () => {
+      if (persistNails) {
+        // Гвозди переезжают жить в кнопку; молоток и стенд убираются.
+        persistNailsIn(host, nails);
+        fx.remove();
+        onDone?.();
+        return;
+      }
       gsap.to(fx, {
         autoAlpha: 0,
         duration: 0.22,

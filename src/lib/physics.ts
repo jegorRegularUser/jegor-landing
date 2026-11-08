@@ -68,7 +68,8 @@ interface PieceMeta {
   splitDepth: number;
   area: number;
   grabScale: number;
-  /** Скорость до столкновения: в collisionStart скорость уже «после» (0.19+). */
+  /** Скорость до шага: в collisionStart она уже частично погашена резолвером —
+   *  кэшируем значение из beforeUpdate для стабильного порога. */
   prevSpeed: number;
 }
 
@@ -201,9 +202,10 @@ export async function createPlayground(
     constraint: { stiffness: 0.2, render: { visible: false } },
   });
   // touchend на window без preventDefault: тапы по сайту не ломаем.
-  window.addEventListener('touchend', (e) => {
-    if (mc.body) mouse.mouseup(e);
-  });
+  const onWindowTouchEnd = (e: Event) => {
+    if (mc.body) mouse.mouseup(e as unknown as MouseEvent);
+  };
+  window.addEventListener('touchend', onWindowTouchEnd);
   Composite.add(engine.world, mc);
 
   const pieces = new Set<Body>();
@@ -226,8 +228,8 @@ export async function createPlayground(
   const placeBin = () => {
     if (!binEl || !binBody) return;
     const { w, h } = binSize();
-    const left = -w * 0.44; // торчит примерно половина
-    const top = H() - h - 10;
+    const left = -w * 0.3; // видна бо́льшая часть, но край остаётся за экраном
+    const top = H() - h + 14; // чуть утоплена ниже пола
     binEl.style.width = `${w}px`;
     binEl.style.left = `${left}px`;
     binEl.style.top = `${top}px`;
@@ -290,8 +292,9 @@ export async function createPlayground(
     clone.classList.add('physics-piece', 'physics-shard');
     // Исходник скрыт до клонирования — inline-visibility переехал бы в осколок;
     // opacity мог замереть на середине твина штампа.
-    clone.style.visibility = '';
+    clone.style.visibility = 'visible';
     clone.style.opacity = '';
+    clone.removeAttribute('data-theme-stamp');
     // inert на корне запрещает и pointer-events — кусок нельзя схватить.
     // Блокируем только таб-фокус на интерактивных потомках.
     clone
@@ -334,6 +337,9 @@ export async function createPlayground(
 
   const splitShard = (body: Body, meta: PieceMeta) => {
     if (!meta.poly || !meta.src) return;
+    // Одно тело может попасть в две пары одного collisionStart (угол+пол):
+    // без сброса флага получим 4 наложенных осколка вместо 2.
+    meta.canSplit = false;
     const c = polyCentroid(meta.poly);
     const jitter = Math.min(meta.rectW, meta.rectH) * 0.14;
     const origin = {
@@ -434,6 +440,7 @@ export async function createPlayground(
       if (meta?.el) meta.el.remove();
       Composite.remove(engine.world, escaped);
       pieces.delete(escaped);
+      if (pieces.size === 0) scheduleBinExit();
     }
     if (mc.body) {
       const meta = mc.body.plugin?.meta as PieceMeta | undefined;
@@ -486,6 +493,12 @@ export async function createPlayground(
     const spin =
       (grabOffset.x * vy - grabOffset.y * vx) / (200 + grabOffset.x ** 2 + grabOffset.y ** 2);
     Body.setAngularVelocity(body, Math.max(-0.55, Math.min(0.55, spin)));
+    // Отпустил в зоне слота — прибиваем сразу, не дожидаясь остановки:
+    // на подлёте кусок слишком быстр, и триггер «почти стоит» его пропускает.
+    if (body === nailBody && nailArmed && anchorRect) {
+      measureAnchor();
+      if (inNailZone(body)) beginNailing();
+    }
   });
 
   // --- визуальный синк ----------------------------------------------------
@@ -557,17 +570,21 @@ export async function createPlayground(
     });
   };
 
+  /** Тело внутри зоны слота (±56px). */
+  const inNailZone = (body: Body): boolean => {
+    if (!anchorRect) return false;
+    const pad = 56;
+    return Bounds.overlaps(body.bounds, {
+      min: { x: anchorRect.left - pad, y: anchorRect.top - pad },
+      max: { x: anchorRect.right + pad, y: anchorRect.bottom + pad },
+    });
+  };
+
   const watchAnchor = () => {
     if (!nailBody || nailing) return;
     if (!anchorRect) measureAnchor();
     if (!anchorRect) return;
-    const pad = 56;
-    const fits =
-      nailBody &&
-      Bounds.overlaps(nailBody.bounds, {
-        min: { x: anchorRect.left - pad, y: anchorRect.top - pad },
-        max: { x: anchorRect.right + pad, y: anchorRect.bottom + pad },
-      });
+    const fits = inNailZone(nailBody);
     if (!fits) {
       // Кусок покинул зону слота (после захвата) — возврат теперь «намеренный».
       if (nailGrabbed) nailArmed = true;
@@ -654,8 +671,11 @@ export async function createPlayground(
         clone.classList.add('physics-piece');
         // Исходник прячется до клонирования; opacity мог замереть на середине
         // твина штампа темы. inert на корне запрещает pointer-events — нельзя.
-        clone.style.visibility = '';
+        clone.style.visibility = 'visible';
         clone.style.opacity = '';
+        // Клон тянет за собой data-theme-stamp: на каждом флипе темы
+        // ThemeProvider гасит «штамп» уже по куску — маркер снимаем.
+        clone.removeAttribute('data-theme-stamp');
         clone
           .querySelectorAll('button, a, input, select, textarea')
           .forEach((n) => n.setAttribute('tabindex', '-1'));
@@ -760,6 +780,14 @@ export async function createPlayground(
     },
 
     setNailBack(anchor, body, onDone) {
+      // Повторный вызов (перезапуск эффекта, смена языка) не должен
+      // разоружать уже взведённое прибивание.
+      if (nailBody === body) {
+        nailAnchor = anchor;
+        nailDone = onDone;
+        anchorRect = null;
+        return;
+      }
       nailAnchor = anchor;
       nailBody = body;
       nailDone = onDone;
@@ -778,6 +806,15 @@ export async function createPlayground(
       cancelAnimationFrame(anchorScanRaf);
       window.clearTimeout(binExitTimer);
       if (import.meta.env.DEV) delete (window as unknown as Record<string, unknown>).__physicsDebug;
+      // Перевешанные на window слушатели мыши — иначе утекают вместе с
+      // замыканием на мёртвую сцену, и движок не собирается GC.
+      window.removeEventListener('mousemove', mouse.mousemove);
+      window.removeEventListener('mouseup', mouse.mouseup);
+      window.removeEventListener('touchend', onWindowTouchEnd);
+      // Поздний onDone после destroy никуда вести не должен.
+      nailDone = null;
+      nailBody = null;
+      nailing = true;
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll);

@@ -167,7 +167,7 @@ export const ru = {
         tags: ['React', 'TypeScript', 'three.js', 'cannon-es', 'pglite'],
         demo: 'https://evolution-online.vercel.app',
         repo: 'https://github.com/jegorRegularUser/evolution-online',
-        screens: ['evolution-online', 'evolution-online-2'],
+        screens: ['evolution-online', 'evolution-online-2', 'evolution-online-3'],
         status: 'ready' as const,
       },
       {

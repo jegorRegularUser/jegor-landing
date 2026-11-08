@@ -166,7 +166,7 @@ export const en: Dict = {
         tags: ['React', 'TypeScript', 'three.js', 'cannon-es', 'pglite'],
         demo: 'https://evolution-online.vercel.app',
         repo: 'https://github.com/jegorRegularUser/evolution-online',
-        screens: ['evolution-online', 'evolution-online-2'],
+        screens: ['evolution-online', 'evolution-online-2', 'evolution-online-3'],
         status: 'ready' as const,
       },
       {
@@ -237,7 +237,7 @@ export const en: Dict = {
     pencil: 'write — I reply',
   },
   footer: {
-    kicker: 'SHEET 08 / CHANGE LOG',
+    kicker: 'SHEET 07 / CHANGE LOG',
     head: { izm: 'REV.', sheets: 'SHEETS', content: 'CONTENT', date: 'DATE' },
     rows: [
       { izm: '01', sheets: 'all', content: 'drawing set 2026-F1 released', date: '11.2026' },

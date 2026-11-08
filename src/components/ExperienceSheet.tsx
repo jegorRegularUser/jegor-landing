@@ -48,15 +48,27 @@ function ExperienceNode({ seed, index, now, accent }: {
     return () => ann.remove();
   }, [open]);
 
-  // Раскрытие — анимацией, не тяп-ляп (6.6).
+  // Раскрытие — плавное: тело вырастает по высоте и проявляется,
+  // rough-рамка к этому моменту уже перерисована на новый размер (6.6).
   useEffect(() => {
     if (open && bodyRef.current && !reduced) {
-      gsap.from(bodyRef.current, {
-        autoAlpha: 0,
-        y: -8,
-        duration: 0.28,
-        ease: 'power2.out',
-      });
+      const el = bodyRef.current;
+      const h = el.offsetHeight;
+      gsap.fromTo(
+        el,
+        { height: 0, autoAlpha: 0, overflow: 'hidden' },
+        {
+          height: h,
+          autoAlpha: 1,
+          duration: 0.5,
+          ease: 'power3.out',
+          clearProps: 'height,overflow',
+          onComplete: () => {
+            el.style.height = '';
+            el.style.overflow = '';
+          },
+        },
+      );
     }
   }, [open, reduced]);
 

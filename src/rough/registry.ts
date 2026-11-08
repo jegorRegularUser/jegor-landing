@@ -163,20 +163,21 @@ function drawEntry(entry: Entry): void {
       if (!opts.d) break;
       // Двойной штрих: карандашный проход → чернильный (спека §4.1 слой 3).
       // Path задан в системе viewBox 1000 (длинная сторона) — масштабируем
-      // в пиксели target.
+      // в пиксели target. Roughness снижен: длинный контур фигуры иначе
+      // рассыпается на ломаные сегменты.
       const longSide = Math.max(w, h);
       const k = longSide / 1000;
       const g = document.createElementNS(SVG_NS, 'g');
       g.setAttribute('transform', `translate(${dx} ${dy}) scale(${k})`);
       const pencil = rc.path(opts.d, {
         seed,
-        roughness: 2.2,
+        roughness: 1.3,
         strokeWidth: 1.2 / k,
         stroke: resolveColor('muted'),
       });
       const ink = rc.path(opts.d, {
         seed,
-        roughness: 1.4,
+        roughness: 0.65,
         strokeWidth: 2.5 / k,
         stroke: color,
       });

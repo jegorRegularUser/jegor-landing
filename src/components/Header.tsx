@@ -57,6 +57,11 @@ export function Header() {
     padding: 3,
   }));
   const [stage, setStage] = useState<ThemeStage>(0);
+  // Слот «ПРИБИТЬ» показывается с задержкой: иначе под курсором мгновенно
+  // вырастает замена, и срыв выглядит как «кнопка осталась на месте».
+  const [nailSlot, setNailSlot] = useState(false);
+  // Кнопка прибита намертво: не качается, не срывается, гвозди живут.
+  const [nailed, setNailed] = useState(false);
   const playgroundRef = useRef<Playground | null>(null);
   const detachedBodyRef = useRef<Body | null>(null);
   const nailAnchorRef = useRef<HTMLButtonElement>(null);
@@ -129,6 +134,8 @@ export function Header() {
       height: btn.offsetHeight || btnRect.height,
     };
     setStage(3);
+    setNailSlot(false);
+    window.setTimeout(() => setNailSlot(true), 900);
     addChange(t.footer.dynamic.button);
     try {
       const { createPlayground } = await import('../lib/physics');
@@ -142,7 +149,10 @@ export function Header() {
           knock(Math.min(1, speed / 12));
         },
       });
-      if (playgroundRef.current) return; // двойной клик: сцена уже создана
+      if (playgroundRef.current) {
+        pg.destroy(); // двойной клик: сцена уже создана — новую не бросаем жить
+        return;
+      }
       playgroundRef.current = pg;
       detachedBodyRef.current = pg.fragmentize(btn, {
         mode: 'solid',
@@ -188,6 +198,7 @@ export function Header() {
       // Гвозди забиты: снести физику и вернуть живую кнопку на её слот.
       setStage(0);
       setPgReady(false);
+      setNailed(true);
       addChange(t.footer.dynamic.nailed);
       knock(0.8);
       window.setTimeout(() => {
@@ -218,12 +229,21 @@ export function Header() {
     const btn = themeBtnRef.current;
     if (!btn) return;
     knock(0.9);
-    playNailFx(btn, { reduced, onDone: () => addChange(t.footer.dynamic.nailed) });
+    playNailFx(btn, {
+      reduced,
+      persistNails: true,
+      onDone: () => {
+        setNailed(true);
+        addChange(t.footer.dynamic.nailed);
+      },
+    });
   }, [stage, reduced, t, addChange, themeBtnRef]);
 
   const onThemeClick = () => {
     toggleTheme();
     addChange(t.footer.dynamic.theme);
+    // Прибитая кнопка мертва как сцена: не качается и не срывается больше.
+    if (nailed) return;
     if (stage < 2) {
       const next = (stage + 1) as ThemeStage;
       setStage(next);
@@ -239,7 +259,7 @@ export function Header() {
     <header className="header">
       <div className="header__row">
         <a className="header__logo" href="#sheet-01">
-          ЕД • <b>2026-Ф1</b>
+          <b>2026-Ф1</b>
         </a>
         <nav className="set-contents" aria-label={t.nav.setContents}>
           {t.nav.sheets.map((s) => (
@@ -273,11 +293,17 @@ export function Header() {
           ) : (
             <button
               type="button"
-              className="toggle-btn"
+              className={`toggle-btn${nailSlot ? ' nail-slot--in' : ' nail-slot--wait'}`}
               ref={nailAnchorRef}
               aria-label={t.nav.nail}
               onClick={nailBack}
-              style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}
+              /* React переиспользует DOM-узел старой кнопки темы с её инлайн-
+                 стилями от GSAP (visibility: hidden) — задahoma видимость явно. */
+              style={{
+                color: 'var(--accent)',
+                borderColor: 'var(--accent)',
+                visibility: nailSlot ? 'visible' : 'hidden',
+              }}
             >
               {t.nav.nail}
             </button>

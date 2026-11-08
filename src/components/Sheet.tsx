@@ -25,11 +25,12 @@ export function Sheet({ id, titleId, kicker, title, titleExtra, dense, hero, chi
   // StrictMode монтирует дважды: без cleanup второй from-твин ловит лист
   // уже скрытым первым и навсегда возвращает его в невидимость.
   useLayoutEffect(() => {
-    const tween = ref.current ? sheetReveal(ref.current) : undefined;
+    const sheet = ref.current;
+    const tween = sheet ? sheetReveal(sheet) : undefined;
     return () => {
       tween?.scrollTrigger?.kill();
       tween?.kill();
-      gsap.set(ref.current, { clearProps: 'all' });
+      gsap.set(sheet, { clearProps: 'all' });
     };
   }, []);
 

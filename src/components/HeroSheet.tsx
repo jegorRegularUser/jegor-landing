@@ -135,11 +135,12 @@ export function HeroSheet() {
   const titleBlockRef = useRough<HTMLDivElement>('stamp', 500, () => ({ padding: 4 }));
 
   // Rough-обводка силуэта по готовому пути (спайк Э4(а) — путь подтверждён).
+  // Уровень 0.002 — самая плотная кривая: меньше изломов на длинных дугах.
   const silhouetteRef = useRough<HTMLDivElement>(
     'silhouette',
     42,
     () => ({
-      d: silhouette.levels['0.004'].path,
+      d: silhouette.levels['0.002'].path,
       targetEl: portraitRef.current?.querySelector('img') ?? null,
     }),
     [],

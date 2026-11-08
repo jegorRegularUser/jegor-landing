@@ -1,3 +1,4 @@
+import { gsap } from '../lib/gsap';
 import { useLayoutEffect, useRef } from 'react';
 import { useLang } from '../i18n/LangContext';
 import { useChangeLog } from '../state/ChangeLog';
@@ -11,7 +12,13 @@ export function FooterSheet() {
   const ref = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
-    if (ref.current) sheetReveal(ref.current);
+    const sheet = ref.current;
+    const tween = sheet ? sheetReveal(sheet) : undefined;
+    return () => {
+      tween?.scrollTrigger?.kill();
+      tween?.kill();
+      gsap.set(sheet, { clearProps: 'all' });
+    };
   }, []);
 
   return (

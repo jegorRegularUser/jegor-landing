@@ -72,6 +72,17 @@ await page.bringToFront();
 // Приложение может монтироваться несколько секунд (vite-трансформация на
 // холодную) — ждём явных признаков, а не фиксированную паузу.
 await page.waitForSelector('[data-theme-stamp]', { timeout: 20000 });
+await page.evaluate(() => {
+  window.__evlog = [];
+  const rec = (e) => {
+    if (window.__evlog.length < 400) {
+      window.__evlog.push(`${e.type}@${Math.round(e.clientX)},${Math.round(e.clientY)}`);
+    }
+  };
+  for (const t of ['mousemove', 'mousedown', 'mouseup']) {
+    window.addEventListener(t, rec, { passive: true, capture: true });
+  }
+});
 await page.waitForTimeout(800);
 
 // ============================== Т1: строка TEL → осколки =====================
@@ -182,11 +193,20 @@ if (revealCount === 1) {
 }
 
 // ============================== Т3: кнопка темы ==============================
+// Возврат наверх принудительно: CSS scroll-behavior может делать scrollTo
+// плавным, а плавный скролл к началу редко успевает за тест.
 await page.evaluate(() => {
-  window.scrollTo(0, 0);
   window.__t3mark = 'pre-clicks';
 });
+let sy = await page.evaluate(() => Math.round(window.scrollY));
+for (let i = 0; i < 40 && sy > 40; i += 1) {
+  await page.mouse.wheel(0, -Math.max(500, sy));
+  await page.waitForTimeout(120);
+  sy = await page.evaluate(() => Math.round(window.scrollY));
+}
+await page.evaluate(() => window.scrollTo(0, 0));
 await page.waitForSelector('[data-theme-stamp]', { timeout: 20000 });
+await page.waitForTimeout(900);
 // Кликаем до появления «ПРИБИТЬ» (максимум 6): каждый клик обязан.flip-нуть тему.
 for (let i = 0; i < 6; i += 1) {
   const state = await page.evaluate(() => ({
@@ -229,31 +249,32 @@ await shot(page, 't3_detached');
 // бросок вправо-вверх — прочь от корзины (только кнопка, не осколки!)
 const themeBefore = t3.theme;
 {
-  const p = await settledPiecePos('.physics-piece:not(.physics-shard)');
-  if (p) {
-    const cx = p.x + 51;
-    const cy = p.y + 16;
-    await page.mouse.move(cx, cy);
-    await page.waitForTimeout(120);
-    const preDown = await page.evaluate(
-      ([mx, my]) => {
-        const d = window.__physicsDebug?.();
-        return {
-          bodies: d?.bodies,
-          hit: document.elementsFromPoint(mx, my).slice(0, 2).map((e) => e.tagName + '.' + String(e.className).slice(0, 30)),
-          scrollY: Math.round(window.scrollY),
-        };
-      },
-      [cx, cy],
-    );
-    log('T3 preDown:', JSON.stringify(preDown));
+  // прицеливание по РЕАЛЬНОМУ телу + ретраи: кусок может медленно катиться
+  let grabbed = false;
+  for (let attempt = 0; attempt < 6 && !grabbed; attempt += 1) {
+    const d = await page.evaluate(() => window.__physicsDebug?.());
+    const b = d?.bodies?.[0];
+    if (!b) break;
+    await page.mouse.move(b.x, b.y);
+    await page.waitForTimeout(160);
     await page.mouse.down();
-    await page.waitForTimeout(250);
-    log('T3 afterDown:', JSON.stringify(await page.evaluate(() => window.__physicsDebug?.())));
+    await page.waitForTimeout(220);
+    const dbg = await page.evaluate(() => window.__physicsDebug?.());
+    grabbed = dbg.grabbed;
+    if (!grabbed) {
+      const ev = await page.evaluate(() => (window.__evlog || []).slice(-5));
+      log(`T3 grab fail ${attempt}: button=${dbg.mouse.button} mouse=(${dbg.mouse.x},${dbg.mouse.y}) ev=${JSON.stringify(ev)}`);
+      await page.mouse.up();
+      await page.waitForTimeout(350);
+    }
+  }
+  log('T3 throw grab:', grabbed);
+  if (grabbed) {
+    const d = await page.evaluate(() => window.__physicsDebug?.());
+    const b = d.bodies[0];
     for (let i = 1; i <= 5; i += 1) {
-      // мышь не покидает вьюпорт: потерянный снаружи mouseup приклеивает кусок
-      const nx = Math.min(cx + i * 70, 1400);
-      const ny = Math.max(40, cy - i * 60);
+      const nx = Math.min(b.x + i * 70, 1400);
+      const ny = Math.max(40, b.y - i * 60);
       await page.mouse.move(nx, ny, { steps: 1 });
       await page.waitForTimeout(14);
     }
@@ -265,35 +286,52 @@ const themeAfter = await page.evaluate(() => document.documentElement.dataset.th
 log('T3 throw:', themeBefore, '->', themeAfter);
 await shot(page, 't3_after_throw');
 
-// прибивание притаскиванием
+// прибивание притаскиванием: ретраи захвата + удержание в зоне слота
 {
-  const p = await settledPiecePos('.physics-piece:not(.physics-shard)');
-  if (p) {
-    const slot = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('header button')].find(
-        (x) => x.textContent.trim() === 'ПРИБИТЬ',
-      );
-      const r = b.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
-    const cx = p.x + 51;
-    const cy = p.y + 16;
-    await page.mouse.move(cx, cy);
-    await page.waitForTimeout(120);
-    await page.mouse.down();
-    for (let i = 1; i <= 18; i += 1) {
-      await page.mouse.move(cx + ((slot.x - cx) * i) / 18, cy + ((slot.y - cy) * i) / 18, {
-        steps: 1,
-      });
-      await page.waitForTimeout(45);
+  const slot = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('header button')].find(
+      (x) => x.textContent.trim() === 'ПРИБИТЬ',
+    );
+    if (!b) return null;
+    const r = b.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (slot) {
+    let grabbed = false;
+    for (let attempt = 0; attempt < 6 && !grabbed; attempt += 1) {
+      const d = await page.evaluate(() => window.__physicsDebug?.());
+      const b = d?.bodies?.[0];
+      if (!b) break;
+      await page.mouse.move(b.x, b.y);
+      await page.waitForTimeout(160);
+      await page.mouse.down();
+      await page.waitForTimeout(220);
+      grabbed = (await page.evaluate(() => window.__physicsDebug?.())).grabbed;
+      if (!grabbed) {
+        await page.mouse.up();
+        await page.waitForTimeout(350);
+      }
     }
-    await page.waitForTimeout(250);
-    await shot(page, 't3_nailing');
-    await page.mouse.up();
-    await page.waitForTimeout(400);
-    const dbg3 = await page.evaluate(() => window.__physicsDebug?.());
-    log('T3 dbg:', JSON.stringify({ grabbed: dbg3?.grabbed, nail: dbg3?.nail, pieces: dbg3?.pieces }));
-    await shot(page, 't3_hammer');
+    log('T3 nail grab:', grabbed);
+    if (grabbed) {
+      // медленно тащим к слоту
+      const d = await page.evaluate(() => window.__physicsDebug?.());
+      const b = d.bodies[0];
+      for (let i = 1; i <= 18; i += 1) {
+        await page.mouse.move(b.x + ((slot.x - b.x) * i) / 18, b.y + ((slot.y - b.y) * i) / 18, {
+          steps: 1,
+        });
+        await page.waitForTimeout(45);
+      }
+      // ДЕРЖИМ: constraint дотягивает тело в зону, прибивание срабатывает при удержании
+      await page.waitForTimeout(1200);
+      const hold = await page.evaluate(() => window.__physicsDebug?.());
+      log('T3 nail hold:', JSON.stringify({ grabbed: hold?.grabbed, nail: hold?.nail }));
+      await shot(page, 't3_nailing');
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      await shot(page, 't3_hammer');
+    }
     const fx = await page.evaluate(() => ({
       fx: !!document.querySelector('.nail-fx'),
       hammer: !!document.querySelector('.nail-fx__hammer'),
