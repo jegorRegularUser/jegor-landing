@@ -27,6 +27,8 @@ export interface FragmentOptions {
   /** Прямоугольник элемента, снятый ДО его размонтирования (у отсоединённого
    *  узла rect нулевой). width/height — натуральные (offsetWidth/Height). */
   rect?: { left: number; top: number; width: number; height: number };
+  /** Подскок вверх при отрыве (px/шаг) — кусок «срывается с гвоздей». */
+  kickUp?: number;
 }
 
 export interface Playground {
@@ -76,7 +78,7 @@ interface PieceMeta {
 const SPLIT_SPEED = 9; // скорость докалывания осколка уровня 0
 const SPLIT_SPEED_2 = 12; // последний уровень — нужен сильный бросок
 const MAX_DEPTH = 2;
-const MIN_SHARD_AREA = 70; // мельче — мусор, не спавним
+const MIN_SHARD_AREA = 16; // крошка тоже живёт — слова не должны исчезать
 const MIN_SPLIT_AREA = 900; // мельче — не докалывается
 const THROW_CAP = 55; // px/шаг, против тоннелирования
 const BIN_W = 210; // корзина вылезает примерно на половину картинки (16)
@@ -496,23 +498,28 @@ export async function createPlayground(
       const meta = body.plugin.meta as PieceMeta | undefined;
       if (meta) meta.prevSpeed = body.speed;
     }
-    // Мягкий clamp: кусок, пробивший стенку быстрым угловым ударом,
-    // возвращается внутрь с отражённой скоростью — иначе падает под экран.
+    // Предиктивный clamp: скорость, которая на ЭТОМ шаге уведёт тело за край
+    // (быстрый угловой удар), отражается ДО пересечения — иначе видимая
+    // скачка-телепорт у пола и «провал под экран».
+    const edge = 12;
     for (const body of pieces) {
       const pp = body.position;
       const vv = body.velocity;
-      if (pp.y > H() + 30) {
-        Body.setPosition(body, { x: Math.min(Math.max(pp.x, 30), W() - 30), y: H() - 26 });
-        Body.setVelocity(body, { x: vv.x * 0.6, y: -Math.abs(vv.y) * 0.5 - 2 });
-      } else if (pp.x < -30) {
-        Body.setPosition(body, { x: 30, y: pp.y });
-        Body.setVelocity(body, { x: Math.abs(vv.x) * 0.5 + 2, y: vv.y });
-      } else if (pp.x > W() + 30) {
-        Body.setPosition(body, { x: W() - 30, y: pp.y });
-        Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.5 - 2, y: vv.y });
-      } else if (pp.y < -50) {
-        Body.setPosition(body, { x: pp.x, y: -30 });
-        Body.setVelocity(body, { x: vv.x, y: Math.abs(vv.y) * 0.5 });
+      const willBottom = pp.y + vv.y > H() - edge;
+      const willLeft = pp.x + vv.x < edge;
+      const willRight = pp.x + vv.x > W() - edge;
+      const willTop = pp.y + vv.y < edge;
+      if (willBottom || willLeft || willRight || willTop) {
+        const nx = Math.min(Math.max(pp.x + vv.x, edge + 20), W() - edge - 20);
+        const ny = Math.min(Math.max(pp.y + vv.y, edge + 20), H() - edge - 20);
+        Body.setPosition(body, {
+          x: willLeft ? edge + 20 : willRight ? W() - edge - 20 : nx,
+          y: willBottom ? H() - edge - 20 : willTop ? edge + 20 : ny,
+        });
+        Body.setVelocity(body, {
+          x: willLeft ? Math.abs(vv.x) * 0.5 + 1 : willRight ? -Math.abs(vv.x) * 0.5 - 1 : vv.x,
+          y: willBottom ? -Math.abs(vv.y) * 0.5 - 1 : willTop ? Math.abs(vv.y) * 0.5 : vv.y,
+        });
       }
     }
     // Страховка от убеговших: тело за пределами мира (тоннель, вырожденный
@@ -803,6 +810,7 @@ export async function createPlayground(
           density: opts.density ?? 0.0028,
           plugin: { meta },
         });
+        if (opts.kickUp) Body.setVelocity(body, { x: 0, y: -opts.kickUp });
         pieces.add(body);
         Composite.add(engine.world, body);
         return body;

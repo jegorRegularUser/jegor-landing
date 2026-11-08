@@ -182,7 +182,7 @@ export const en: Dict = {
       {
         id: '03',
         name: 'BORROWED VESSELS',
-        desc: 'A Godot card-battler where you are not the hero but the voice in his head. Every resisted card is a decision: force it, talk him into it, or back down. Wounds and cruelties stay in the deck as wound cards.',
+        desc: 'A card roguelike on Godot where you are not the hero but the voice in his head. Fight, grow stronger and reach your goals while struggling with the owner of this body. It is up to you: cooperate with him or subdue his will to your own.',
         tags: ['Godot', 'GDScript', 'card-battle'],
         demo: 'https://jegorregularuser.itch.io/borrowed-vessels',
         repo: '',
@@ -244,6 +244,7 @@ export const en: Dict = {
       { izm: '01', sheets: 'all', content: 'drawing set 2026-F1 released', date: '07.11.2026' },
       { izm: '02', sheets: 'all', content: 'revision per acceptance results', date: '07.11.2026' },
       { izm: '03', sheets: '00, 01, 02', content: 'style fixes: title sheet, assembly rail, elements list', date: '08.11.2026' },
+      { izm: '04', sheets: '03', content: 'new Borrowed Vessels description', date: '08.11.2026' },
     ],
     dynamic: {
       theme: 'REV. applied: blueprint ↔ vellum',

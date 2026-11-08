@@ -1287,6 +1287,11 @@
   border-color: var(--accent);
 }
 
+/* Прибитая: обводка остаётся акцентной — гвозди держат кнопку на листе. */
+.theme-btn--nailed {
+  border-color: var(--accent);
+}
+
 .sketch-cover {
   position: fixed;
   inset: 0;

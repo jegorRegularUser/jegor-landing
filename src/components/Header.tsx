@@ -129,6 +129,9 @@ export function Header() {
       width: btn.offsetWidth || btnRect.width,
       height: btn.offsetHeight || btnRect.height,
     };
+    // Срыв: штамп-твин и вобл умирают здесь, кнопка не «выпрямляется» в кадре отрыва.
+    gsap.killTweensOf(btn);
+    gsap.set(btn, { clearProps: 'transform,opacity,visibility' });
     setStage(3);
     addChange(t.footer.dynamic.button);
     try {
@@ -152,6 +155,7 @@ export function Header() {
         mode: 'solid',
         restitution: 0.6,
         rect,
+        kickUp: 2.4,
       });
       pg.setBin(sketchCover);
       setPgReady(true);
@@ -230,6 +234,10 @@ export function Header() {
     } else if (stage === 2) {
       void detach();
     }
+  if (stage === 1) {
+    // предзагрузка физики: к третьему клику модуль готов — отрыв без паузы
+    void import('../lib/physics').catch(() => {});
+  }
     // stage 3: кнопка в физике, кликов нет.
   };
 
@@ -259,7 +267,7 @@ export function Header() {
           {stage < 3 ? (
             <button
               type="button"
-              className={`toggle-btn theme-btn${stage > 0 ? ' theme-btn--loose' : ''}`}
+              className={`toggle-btn theme-btn${stage > 0 && !nailed ? ' theme-btn--loose' : nailed ? ' theme-btn--nailed' : ''}`}
               data-theme-stamp
               ref={themeBtnRef}
               aria-label={t.nav.themeAria}
