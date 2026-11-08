@@ -44,7 +44,7 @@ export const ru = {
       sheet: 'ЛИСТ 0 — ЛИСТОВ 8',
       dateLabel: 'ДАТА',
     },
-    pencil: '',
+    pencil: 'вырезал сам, ночью',
     contactsAria: 'Контакты в шапке листа',
     errTodo: '// TODO: не забыть поставить градиент\n// на белой теме',
   },
@@ -68,13 +68,14 @@ export const ru = {
         years: '2023–2024',
       },
     ],
-    pencil: 'всё настоящее',
+    pencil: 'всё по паспорту',
   },
   experience: {
     kicker: 'ЛИСТ 02 / ОПЫТ',
     title: 'МОНТАЖНАЯ ОСЬ',
     nowMark: 'Н.В.',
     expandAria: 'Подробнее о месте работы',
+    pencil: 'да, двумя сразу',
     nodes: [
       {
         period: '05.2024–08.2024',
@@ -146,7 +147,7 @@ export const ru = {
       'C',
       'Java',
     ],
-    pencil: 'TS — любимое',
+    pencil: 'наведи — подсветится',
   },
   projects: {
     kicker: 'ЛИСТ 04 / ПРОЕКТЫ',
@@ -158,7 +159,7 @@ export const ru = {
     next: 'Следующий кадр',
     counterAria: 'Номер кадра',
     wipStamp: 'В РАЗРАБОТКЕ',
-    pencil: 'вживую лучше',
+    pencil: 'скрины не передают боль',
     items: [
       {
         id: '01',
@@ -177,7 +178,7 @@ export const ru = {
         tags: ['Next.js', 'TypeScript', 'Яндекс API', 'Overpass API'],
         demo: 'https://jegors-intelligent-trails.vercel.app',
         repo: 'https://github.com/jegorRegularUser/intelligent-trails',
-        screens: ['intelligent-trails', 'intelligent-trails-2', 'intelligent-trails-3'],
+        screens: ['intelligent-trails', 'intelligent-trails-2', 'intelligent-trails-5', 'intelligent-trails-3'],
         status: 'ready' as const,
       },
       {
@@ -198,7 +199,7 @@ export const ru = {
     doc: 'ДОК.',
     close: 'ЗАКРЫТЬ',
     lightboxAria: 'Просмотр документа',
-    pencil: '11 шт., всё настоящее',
+    pencil: 'мама хранит оригиналы',
     items: [
       { file: 'atomic', caption: 'AtomicHack — 5 место' },
       { file: 'digit', caption: 'Цифровой прорыв 2023' },
@@ -235,7 +236,7 @@ export const ru = {
     copiedAria: 'Скопировано в буфер обмена',
     approved: 'УТВЕРЖДЕНО К СБОРКЕ',
     binAria: 'Корзина',
-    pencil: 'напиши — отвечу',
+    pencil: 'пишите, не кусаюсь',
   },
   footer: {
     kicker: 'ЛИСТ 07 / РЕГИСТРАЦИЯ ИЗМЕНЕНИЙ',

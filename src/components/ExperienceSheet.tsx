@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { gsap } from '../lib/gsap';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { gsap, ScrollTrigger } from '../lib/gsap';
 import { annotate } from 'rough-notation';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import { useMedia } from '../hooks/useMedia';
 import { Sheet } from './Sheet';
+import { PencilMark } from './PencilMark';
 
 /**
  * ЛИСТ 03 — Опыт (ревизия 04): последовательный стек карточек.
@@ -48,27 +49,41 @@ function ExperienceNode({ seed, index, now, accent }: {
     return () => ann.remove();
   }, [open]);
 
-  // Раскрытие — плавное: тело вырастает по высоте и проявляется,
-  // rough-рамка к этому моменту уже перерисована на новый размер (6.6).
-  useEffect(() => {
-    if (open && bodyRef.current && !reduced) {
-      const el = bodyRef.current;
-      const h = el.offsetHeight;
+  // Тело живёт в DOM всегда: открытие — рост height + проявление,
+  // закрытие — схлопывание (раньше оно исчезало рывком, без анимации).
+  useLayoutEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    if (reduced) {
+      el.style.height = open ? 'auto' : '0px';
+      el.style.overflow = 'hidden';
+      el.style.opacity = open ? '1' : '0';
+      return;
+    }
+    gsap.killTweensOf(el);
+    if (open) {
       gsap.fromTo(
         el,
         { height: 0, autoAlpha: 0, overflow: 'hidden' },
         {
-          height: h,
+          height: el.scrollHeight,
           autoAlpha: 1,
           duration: 0.5,
           ease: 'power3.out',
-          clearProps: 'height,overflow',
           onComplete: () => {
-            el.style.height = '';
+            el.style.height = 'auto';
             el.style.overflow = '';
           },
         },
       );
+    } else {
+      gsap.to(el, {
+        height: 0,
+        autoAlpha: 0,
+        overflow: 'hidden',
+        duration: 0.32,
+        ease: 'power3.in',
+      });
     }
   }, [open, reduced]);
 
@@ -90,15 +105,18 @@ function ExperienceNode({ seed, index, now, accent }: {
         </span>
         <span className="exp-node__org" ref={orgRef}>{node.org}</span>
       </button>
-      {open && (
-        <div className="exp-node__body" ref={bodyRef}>
-          <ul className="exp-node__list">
-            {node.points.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div
+        className="exp-node__body"
+        ref={bodyRef}
+        style={{ height: 0, opacity: 0, overflow: 'hidden' }}
+        aria-hidden={!open}
+      >
+        <ul className="exp-node__list">
+          {node.points.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -109,19 +127,30 @@ export function ExperienceSheet() {
   const stageRef = useRef<HTMLDivElement>(null);
 
   // Вход стека: карточки поднимаются по очереди, когда лист доскроллился.
+  // Паттерн AboutSheet: триггер отдельно, твин paused, onEnter играет —
+  // связка gsap.from + scrollTrigger-конфиг здесь зависала в from-состоянии.
   useLayoutEffect(() => {
     const stage = stageRef.current;
     if (!stage || reduced) return;
-    const tw = gsap.from(stage.querySelectorAll('.exp-node'), {
+    const cards = stage.querySelectorAll('.exp-node');
+    const tw = gsap.from(cards, {
       autoAlpha: 0,
       y: 24,
       stagger: 0.08,
       duration: 0.5,
       ease: 'power2.out',
-      scrollTrigger: { trigger: stage, start: 'top 80%', once: true },
+      paused: true,
     });
+    const st = ScrollTrigger.create({
+      trigger: stage,
+      start: 'top 80%',
+      once: true,
+      onEnter: () => tw.play(),
+    });
+    // Лист уже прокручен за старт (якорь/перезагрузка) — играем сразу.
+    if (st.progress > 0 || st.isActive) tw.play();
     return () => {
-      tw.scrollTrigger?.kill();
+      st.kill();
       tw.kill();
     };
   }, [reduced]);
@@ -139,6 +168,7 @@ export function ExperienceSheet() {
           />
         ))}
       </div>
+      <PencilMark text={t.experience.pencil} style={{ bottom: '6px', right: '8%' }} />
     </Sheet>
   );
 }

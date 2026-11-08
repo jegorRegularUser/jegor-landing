@@ -43,7 +43,7 @@ export const en: Dict = {
       sheet: 'SHEET 0 — SHEETS 8',
       dateLabel: 'DATE',
     },
-    pencil: '',
+    pencil: 'cut the background myself, at night',
     contactsAria: 'Contacts on the title sheet',
     errTodo: "// TODO: don't forget to add the gradient\n// to the light theme",
   },
@@ -67,13 +67,14 @@ export const en: Dict = {
         years: '2023–2024',
       },
     ],
-    pencil: 'all real',
+    pencil: 'straight from the passport',
   },
   experience: {
     kicker: 'SHEET 02 / EXPERIENCE',
     title: 'ASSEMBLY RAIL',
     nowMark: 'PRESENT',
     expandAria: 'More about the workplace',
+    pencil: 'yes, two at once',
     nodes: [
       {
         period: '05.2024–08.2024',
@@ -145,7 +146,7 @@ export const en: Dict = {
       'C',
       'Java',
     ],
-    pencil: 'TS is the favorite',
+    pencil: 'hover to highlight',
   },
   projects: {
     kicker: 'SHEET 04 / PROJECTS',
@@ -157,7 +158,7 @@ export const en: Dict = {
     next: 'Next frame',
     counterAria: 'Frame number',
     wipStamp: 'IN DEVELOPMENT',
-    pencil: 'better live',
+    pencil: "screenshots don't show the pain",
     items: [
       {
         id: '01',
@@ -176,7 +177,7 @@ export const en: Dict = {
         tags: ['Next.js', 'TypeScript', 'Yandex API', 'Overpass API'],
         demo: 'https://jegors-intelligent-trails.vercel.app',
         repo: 'https://github.com/jegorRegularUser/intelligent-trails',
-        screens: ['intelligent-trails', 'intelligent-trails-2', 'intelligent-trails-3'],
+        screens: ['intelligent-trails', 'intelligent-trails-2', 'intelligent-trails-5', 'intelligent-trails-3'],
         status: 'ready' as const,
       },
       {
@@ -197,7 +198,7 @@ export const en: Dict = {
     doc: 'DOC.',
     close: 'CLOSE',
     lightboxAria: 'Document viewer',
-    pencil: '11 pcs., all real',
+    pencil: 'mom keeps the originals',
     items: [
       { file: 'atomic', caption: 'AtomicHack — 5th place' },
       { file: 'digit', caption: 'Digital Breakthrough 2023' },
@@ -234,7 +235,7 @@ export const en: Dict = {
     copiedAria: 'Address copied',
     approved: 'APPROVED FOR ASSEMBLY',
     binAria: 'Trash bin',
-    pencil: 'write — I reply',
+    pencil: "write, I don't bite",
   },
   footer: {
     kicker: 'SHEET 07 / CHANGE LOG',

@@ -4,12 +4,20 @@ import { chromium } from 'playwright';
 const browser = await chromium.launch();
 
 for (const [name, url] of [
-  ['evolution', 'https://evolution-online.vercel.app/'],
-  ['trails', 'https://jegors-intelligent-trails.vercel.app/'],
+  ['trails-map-add', 'https://jegors-intelligent-trails.vercel.app/map'],
 ]) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto(url, { waitUntil: 'load', timeout: 30000 });
-  await page.waitForTimeout(3500);
+  await page.waitForTimeout(5000);
+  // открыть блок «+ Добавить место» и вкладку «Категория»
+  try {
+    await page.getByRole('button', { name: /\+ Добавить место/i }).click({ timeout: 4000 });
+    await page.waitForTimeout(800);
+  } catch {}
+  try {
+    await page.getByRole('button', { name: /Категория/i }).first().click({ timeout: 4000 });
+    await page.waitForTimeout(800);
+  } catch {}
   const items = await page.evaluate(() =>
     Array.from(document.querySelectorAll('button, a[href], input, [role="button"]'))
       .filter((el) => {

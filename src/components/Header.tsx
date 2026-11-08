@@ -7,7 +7,7 @@ import { useRough } from '../rough/useRough';
 import { useMedia } from '../hooks/useMedia';
 import { useChangeLog } from '../state/ChangeLog';
 import { knock } from '../lib/knock';
-import { playNailFx } from '../lib/nailFx';
+import { persistNailsOn } from '../lib/nailFx';
 import type { Playground } from '../lib/physics';
 import type { Body } from 'matter-js';
 import { CAD_TOGGLE_EVENT } from './CadCursor';
@@ -57,15 +57,11 @@ export function Header() {
     padding: 3,
   }));
   const [stage, setStage] = useState<ThemeStage>(0);
-  // Слот «ПРИБИТЬ» показывается с задержкой: иначе под курсором мгновенно
-  // вырастает замена, и срыв выглядит как «кнопка осталась на месте».
-  const [nailSlot, setNailSlot] = useState(false);
   // Кнопка прибита намертво: не качается, не срывается, гвозди живут.
   const [nailed, setNailed] = useState(false);
   const playgroundRef = useRef<Playground | null>(null);
   const detachedBodyRef = useRef<Body | null>(null);
-  const nailAnchorRef = useRef<HTMLButtonElement>(null);
-  const pendingNailFxRef = useRef(false);
+  const nailAnchorRef = useRef<HTMLSpanElement>(null);
   const detachingRef = useRef(false);
   const lastFlip = useRef(0);
   // Гонка: эффект на stage 3 срабатывает раньше, чем резолвится import физики.
@@ -134,8 +130,6 @@ export function Header() {
       height: btn.offsetHeight || btnRect.height,
     };
     setStage(3);
-    setNailSlot(false);
-    window.setTimeout(() => setNailSlot(true), 900);
     addChange(t.footer.dynamic.button);
     try {
       const { createPlayground } = await import('../lib/physics');
@@ -211,33 +205,14 @@ export function Header() {
     });
   }, [stage, pgReady, t, addChange]);
 
-  /** Прибить вручную (кнопка-запаска для a11y): физика сносится, молоток бьёт по живой кнопке. */
-  const nailBack = () => {
-    const pg = playgroundRef.current;
-    playgroundRef.current = null;
-    detachedBodyRef.current = null;
-    pg?.destroy();
-    setStage(0);
-    setPgReady(false);
-    pendingNailFxRef.current = true;
-  };
-
-  // Кнопка вернулась на слот — играем молоток с гвоздями на живом элементе.
+  // Живая кнопка вернулась на слот — молоток уже отыграл по куску в физике,
+  // на свежую кнопку просто переносим забитые гвозди (второй раз бить не надо).
   useEffect(() => {
-    if (stage !== 0 || !pendingNailFxRef.current) return;
-    pendingNailFxRef.current = false;
+    if (stage !== 0 || !nailed) return;
     const btn = themeBtnRef.current;
-    if (!btn) return;
-    knock(0.9);
-    playNailFx(btn, {
-      reduced,
-      persistNails: true,
-      onDone: () => {
-        setNailed(true);
-        addChange(t.footer.dynamic.nailed);
-      },
-    });
-  }, [stage, reduced, t, addChange, themeBtnRef]);
+    if (!btn || btn.querySelector('.nail-fx__nail')) return;
+    persistNailsOn(btn);
+  }, [stage, nailed]);
 
   const onThemeClick = () => {
     toggleTheme();
@@ -291,22 +266,9 @@ export function Header() {
               {t.nav.theme}
             </button>
           ) : (
-            <button
-              type="button"
-              className={`toggle-btn${nailSlot ? ' nail-slot--in' : ' nail-slot--wait'}`}
-              ref={nailAnchorRef}
-              aria-label={t.nav.nail}
-              onClick={nailBack}
-              /* React переиспользует DOM-узел старой кнопки темы с её инлайн-
-                 стилями от GSAP (visibility: hidden) — задahoma видимость явно. */
-              style={{
-                color: 'var(--accent)',
-                borderColor: 'var(--accent)',
-                visibility: nailSlot ? 'visible' : 'hidden',
-              }}
-            >
-              {t.nav.nail}
-            </button>
+            /* Невидимый слот — якорь для прибивания притаскиванием (11).
+               Никакой заменяющей кнопки: в навигации дыра, летит один кусок. */
+            <span ref={nailAnchorRef} className="nail-slot-anchor" aria-hidden="true" />
           )}
           <button
             type="button"

@@ -148,6 +148,57 @@ function clipHalfPlane(poly: Pt[], origin: Pt, nx: number, ny: number): Pt[] {
   return out;
 }
 
+/** Клип произвольного (слабо-вогнутого) полинома по выпуклому:
+ *  последовательный SH-клип по каждому рёберному полупространству клипа. */
+function clipByConvex(subject: Pt[], clip: Pt[]): Pt[] {
+  let out = subject;
+  const cc = polyCentroid(clip);
+  for (let i = 0; i < clip.length && out.length >= 3; i += 1) {
+    const a = clip[i];
+    const b = clip[(i + 1) % clip.length];
+    let nx = -(b.y - a.y);
+    let ny = b.x - a.x;
+    const len = Math.hypot(nx, ny) || 1;
+    nx /= len;
+    ny /= len;
+    // нормаль должна смотреть внутрь клипа (к его центроиду)
+    if ((cc.x - a.x) * nx + (cc.y - a.y) * ny < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    out = clipHalfPlane(out, a, nx, ny);
+  }
+  return out;
+}
+
+/** Мини-вороной внутри прямоугольника: n точек с джиттером → выпуклые клетки. */
+function voronoiInBox(minX: number, minY: number, w: number, h: number, n: number): Pt[][] {
+  if (w < 30 || h < 18) return [];
+  const pad = 0.18;
+  const pts: Pt[] = [
+    { x: minX + w / 2 + (Math.random() - 0.5) * w * 0.2, y: minY + h / 2 + (Math.random() - 0.5) * h * 0.2 },
+  ];
+  for (let i = 0; i < n; i += 1) {
+    pts.push({
+      x: minX + w * (pad + Math.random() * (1 - pad * 2)),
+      y: minY + h * (pad + Math.random() * (1 - pad * 2)),
+    });
+  }
+  const delaunay = Delaunay.from(
+    pts,
+    (q) => q.x,
+    (q) => q.y,
+  );
+  const vor = delaunay.voronoi([minX, minY, minX + w, minY + h]);
+  const cells: Pt[][] = [];
+  for (let i = 0; i < pts.length; i += 1) {
+    const cell = vor.cellPolygon(i);
+    if (!cell || cell.length < 4) continue;
+    cells.push(cell.slice(0, -1).map((q) => ({ x: q[0], y: q[1] })));
+  }
+  return cells;
+}
+
 export async function createPlayground(
   container: HTMLElement,
   hooks: { onImpact?: (piece: HTMLElement, speed: number) => void } = {},
@@ -228,8 +279,8 @@ export async function createPlayground(
   const placeBin = () => {
     if (!binEl || !binBody) return;
     const { w, h } = binSize();
-    const left = -w * 0.3; // видна бо́льшая часть, но край остаётся за экраном
-    const top = H() - h + 14; // чуть утоплена ниже пола
+    const left = -w * 0.18; // видна почти вся корзина, край за экраном
+    const top = H() - h + 22; // утоплена ниже пола
     binEl.style.width = `${w}px`;
     binEl.style.left = `${left}px`;
     binEl.style.top = `${top}px`;
@@ -341,45 +392,69 @@ export async function createPlayground(
     // без сброса флага получим 4 наложенных осколка вместо 2.
     meta.canSplit = false;
     const c = polyCentroid(meta.poly);
-    const jitter = Math.min(meta.rectW, meta.rectH) * 0.14;
-    const origin = {
-      x: c.x + (Math.random() - 0.5) * jitter,
-      y: c.y + (Math.random() - 0.5) * jitter,
-    };
-    const dir = Math.random() * Math.PI;
-    const nx = Math.cos(dir);
-    const ny = Math.sin(dir);
-    const halfA = clipHalfPlane(meta.poly, origin, nx, ny);
-    const halfB = clipHalfPlane(meta.poly, origin, -nx, -ny);
-    if (polyArea(halfA) < MIN_SHARD_AREA || polyArea(halfB) < MIN_SHARD_AREA) {
-      meta.canSplit = false; // резать больше некуда
-      return;
-    }
+    const xs = meta.poly.map((q) => q.x);
+    const ys = meta.poly.map((q) => q.y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    // Докалывание — мини-вороной по bbox осколка: неровные «стеклянные»
+    // куски вместо плоских полос от бисекции вытянутого осколка.
+    const cells = voronoiInBox(minX, minY, Math.max(...xs) - minX, Math.max(...ys) - minY, 3);
+    const parts = cells
+      .map((cell) => clipByConvex(cell, meta.poly!))
+      .filter((poly) => poly.length >= 3 && polyArea(poly) >= MIN_SHARD_AREA);
+    if (parts.length < 2) return;
     const { x: px, y: py } = body.position;
     const cos = Math.cos(body.angle);
     const sin = Math.sin(body.angle);
     const v = body.velocity;
     removePiece(body);
-    for (const half of [halfA, halfB]) {
-      const child = polyCentroid(half);
-      // центроид потомка в мире: P + R(angle)·(c_child − c_parent)
+    for (const poly of parts) {
+      const child = polyCentroid(poly);
       const dx = child.x - c.x;
       const dy = child.y - c.y;
-      const side = half === halfA ? 1 : -1;
+      // центроид потомка в мире: P + R(angle)·(c_child − c_parent)
+      const kick = 1.4 + Math.random() * 1.8;
+      const ang = Math.atan2(dy, dx) || Math.random() * Math.PI * 2;
       makeShard(
         meta.src,
         meta.rectW,
         meta.rectH,
-        half,
+        poly,
         { x: px + dx * cos - dy * sin, y: py + dx * sin + dy * cos },
         body.angle,
         {
-          x: v.x + nx * 2.1 * side + (Math.random() - 0.5),
-          y: v.y + ny * 2.1 * side - 0.8,
+          x: v.x + Math.cos(ang) * kick,
+          y: v.y + Math.sin(ang) * kick - 0.6,
         },
         meta.splitDepth + 1,
       );
     }
+  };
+
+  /** Корзина не аннигилирует: тело уходит из мира сразу, а клон доедает
+   *  инерцию внутрь корзины и растворяется на глазах. */
+  const swallowPiece = (body: Body, bin: Body) => {
+    const meta = body.plugin.meta as PieceMeta | undefined;
+    if (!meta || !meta.el) return;
+    if (mc.body === body) {
+      mc.constraint.bodyB = null;
+      (mc as unknown as { body: Body | null }).body = null;
+    }
+    const el = meta.el;
+    const v = body.velocity;
+    Composite.remove(engine.world, body);
+    pieces.delete(body);
+    if (pieces.size === 0) scheduleBinExit();
+    gsap.to(el, {
+      x: `+=${bin.position.x - body.position.x + v.x * 12}`,
+      y: `+=${bin.position.y - body.position.y + v.y * 12 + 30}`,
+      rotation: `+=${(Math.random() - 0.5) * 80}`,
+      scale: 0.45,
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power2.in',
+      onComplete: () => el.remove(),
+    });
   };
 
   // --- столкновения -------------------------------------------------------
@@ -395,8 +470,7 @@ export async function createPlayground(
         if (other.plugin?.bin) {
           // Корзина ест ВСЕ куски, обработчик живёт до destroy (был баг: снимался после первого).
           onBinEnter?.(meta.el);
-          removePiece(body);
-          if (pieces.size === 0) scheduleBinExit();
+          swallowPiece(body, other);
           continue;
         }
         const speed = meta.prevSpeed;
@@ -421,6 +495,25 @@ export async function createPlayground(
     for (const body of pieces) {
       const meta = body.plugin.meta as PieceMeta | undefined;
       if (meta) meta.prevSpeed = body.speed;
+    }
+    // Мягкий clamp: кусок, пробивший стенку быстрым угловым ударом,
+    // возвращается внутрь с отражённой скоростью — иначе падает под экран.
+    for (const body of pieces) {
+      const pp = body.position;
+      const vv = body.velocity;
+      if (pp.y > H() + 30) {
+        Body.setPosition(body, { x: Math.min(Math.max(pp.x, 30), W() - 30), y: H() - 26 });
+        Body.setVelocity(body, { x: vv.x * 0.6, y: -Math.abs(vv.y) * 0.5 - 2 });
+      } else if (pp.x < -30) {
+        Body.setPosition(body, { x: 30, y: pp.y });
+        Body.setVelocity(body, { x: Math.abs(vv.x) * 0.5 + 2, y: vv.y });
+      } else if (pp.x > W() + 30) {
+        Body.setPosition(body, { x: W() - 30, y: pp.y });
+        Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.5 - 2, y: vv.y });
+      } else if (pp.y < -50) {
+        Body.setPosition(body, { x: pp.x, y: -30 });
+        Body.setVelocity(body, { x: vv.x, y: Math.abs(vv.y) * 0.5 });
+      }
     }
     // Страховка от убеговших: тело за пределами мира (тоннель, вырожденный
     // полигон) падает вечно и шумит — списываем его.

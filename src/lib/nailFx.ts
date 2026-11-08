@@ -36,6 +36,22 @@ function persistNailsIn(host: HTMLElement, nails: HTMLImageElement[]): void {
   });
 }
 
+/** Проставить забитые гвозди на хост без FX-сцены: живая кнопка вернулась
+ *  на слот после прибивания куска — молоток уже отыграл по куску. */
+export function persistNailsOn(host: HTMLElement): void {
+  if (host.querySelector('.nail-fx__nail')) return;
+  if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+  for (let i = 0; i < NAILS; i += 1) {
+    const nail = document.createElement('img');
+    nail.src = nailFixedSrc;
+    nail.alt = '';
+    nail.className = 'nail-fx__nail';
+    nail.style.left = `${9 + i * 15}px`;
+    nail.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(0.82)';
+    host.appendChild(nail);
+  }
+}
+
 export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
   const { reduced = false, shakeEl = null, persistNails = false, onDone } = opts;
   const rect = host.getBoundingClientRect();

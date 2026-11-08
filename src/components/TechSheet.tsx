@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import { useTheme } from '../theme/ThemeProvider';
@@ -40,6 +40,33 @@ export function TechSheet() {
   }));
   const [pinned, setPinned] = useState<ReadonlySet<string>>(new Set());
 
+  // Оба комплекта греются в кэше сразу после load (fetchpriority low, чтобы
+  // не воевать с LCP-портретом): смена темы и первый скролл к листу —
+  // мгновенные, без burst из 24 запросов и без «пачки через 10 секунд».
+  useEffect(() => {
+    let cancelled = false;
+    const warm = () => {
+      if (cancelled) return;
+      for (const url of [...Object.values(icons), ...Object.values(iconsDark)]) {
+        const img = new Image();
+        img.setAttribute('fetchpriority', 'low');
+        img.src = url;
+      }
+    };
+    if (document.readyState === 'complete') {
+      const t = window.setTimeout(warm, 800);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(t);
+      };
+    }
+    window.addEventListener('load', warm, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener('load', warm);
+    };
+  }, []);
+
   const togglePin = (label: string) => {
     setPinned((prev) => {
       const next = new Set(prev);
@@ -67,7 +94,9 @@ export function TechSheet() {
               title={label}
               onPointerEnter={() => togglePin(label)}
             >
-              {icon && <img src={icon} alt={label} height={76} decoding="async" />}
+              {icon && (
+                <img src={icon} alt={label} height={76} loading="lazy" decoding="async" />
+              )}
               <span className="tech-tile__name" aria-hidden="true">
                 {label}
               </span>

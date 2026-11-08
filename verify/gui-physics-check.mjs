@@ -289,9 +289,8 @@ await shot(page, 't3_after_throw');
 // прибивание притаскиванием: ретраи захвата + удержание в зоне слота
 {
   const slot = await page.evaluate(() => {
-    const b = [...document.querySelectorAll('header button')].find(
-      (x) => x.textContent.trim() === 'ПРИБИТЬ',
-    );
+    // юзерская ревизия: слот-якорь вместо кнопки «ПРИБИТЬ»
+    const b = document.querySelector('.nail-slot-anchor');
     if (!b) return null;
     const r = b.getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
