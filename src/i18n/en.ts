@@ -166,7 +166,7 @@ export const en: Dict = {
         tags: ['React', 'TypeScript', 'three.js', 'cannon-es', 'pglite'],
         demo: 'https://evolution-online.vercel.app',
         repo: 'https://github.com/jegorRegularUser/evolution-online',
-        screens: ['evolution-online', 'evolution-online-2', 'evolution-online-3'], // demo RU-only, EN build doesn't exist
+        screens: ['evolution-online-en', 'evolution-online-2-en', 'evolution-online-3-en'],
         status: 'ready' as const,
       },
       {

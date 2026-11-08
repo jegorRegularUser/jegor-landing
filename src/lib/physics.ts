@@ -80,7 +80,7 @@ const SPLIT_SPEED_2 = 12; // последний уровень — нужен с
 const MAX_DEPTH = 2;
 const MIN_SHARD_AREA = 16; // крошка тоже живёт — слова не должны исчезать
 const MIN_SPLIT_AREA = 900; // мельче — не докалывается
-const THROW_CAP = 55; // px/шаг, против тоннелирования
+const THROW_CAP = 60; // px/шаг, против тоннелирования
 const BIN_W = 210; // корзина вылезает примерно на половину картинки (16)
 
 function polyArea(poly: Pt[]): number {
@@ -278,19 +278,20 @@ export async function createPlayground(
     return { w: h * (441 / 680), h };
   };
 
+  // Утоплена сильно: над «полом» только верхняя часть (~45% высоты картинки).
   const placeBin = () => {
-    if (!binEl || !binBody) return;
+    if (!binEl) return;
     const { w, h } = binSize();
-    const left = -w * 0.18; // видна почти вся корзина, край за экраном
-    const top = H() - h + 22; // утоплена ниже пола
+    const left = -w * 0.22; // край картинки за экраном
+    const top = H() - h * 0.45;
     binEl.style.width = `${w}px`;
     binEl.style.left = `${left}px`;
     binEl.style.top = `${top}px`;
-    // Сенсор — по видимой (правой) половине картинки и до самого пола:
-    // куски, докатившиеся по полу, иначе проходят под нижней кромкой.
+    if (!binBody) return;
+    // Сенсор строго по НАДВОДНОЙ части: ниже уровня экрана куски не пропадают.
     Body.setPosition(binBody, {
-      x: left + w * 0.72,
-      y: top + h * 0.49,
+      x: left + w * 0.62,
+      y: top + (h * 0.45) * 0.5,
     });
   };
 
@@ -298,6 +299,9 @@ export async function createPlayground(
     if (binShown || binGone || !binEl) return;
     binShown = true;
     binEl.classList.add('physics-bin--in');
+    placeBin();
+    // Сенсор встаёт в мир только вместе с видимой корзиной.
+    if (binBody && !binGone) Composite.add(engine.world, binBody);
   };
 
   const removePiece = (body: Body) => {
@@ -382,6 +386,7 @@ export async function createPlayground(
       plugin: { meta },
     });
     if (!body) return null;
+    Body.setInertia(body, body.inertia * 2.5);
     if (velocity) Body.setVelocity(body, velocity);
     pieces.add(body);
     Composite.add(engine.world, body);
@@ -498,32 +503,52 @@ export async function createPlayground(
       const meta = body.plugin.meta as PieceMeta | undefined;
       if (meta) meta.prevSpeed = body.speed;
     }
-    // Предиктивный clamp: скорость, которая на ЭТОМ шаге уведёт тело за край
-    // (быстрый угловой удар), отражается ДО пересечения — иначе видимая
-    // скачка-телепорт у пола и «провал под экран».
-    const edge = 12;
+    // ЖЁСТКИЕ ГРАНИЦЫ: bounds тела не имеют права пересечь видимую область —
+    // ни на прогнозе, ни на факте. Двойная защита: до шага и после него.
+    const clampBounds = (hard: boolean) => {
+      const top = 2;
+      const left = 2;
+      for (const body of pieces) {
+        const b = body.bounds;
+        const maxY = H() - 4;
+        const maxX = W() - 4;
+        const out =
+          b.max.y > maxY || b.min.y < top || b.max.x > maxX || b.min.x < left;
+        if (!out) continue;
+        const dx =
+          b.max.x > maxX ? b.max.x - maxX : b.min.x < left ? b.min.x - left : 0;
+        const dy = b.max.y > maxY ? b.max.y - maxY : b.min.y < top ? b.min.y - top : 0;
+        if (hard || !hard) {
+          // сдвигаем тело внутрь ровно на величину выхода
+          Body.setPosition(body, { x: body.position.x - dx, y: body.position.y - dy });
+          const vv = body.velocity;
+          if (dy > 0 && vv.y > 0) {
+            Body.setVelocity(body, { x: vv.x * 0.7, y: -Math.abs(vv.y) * 0.45 - 1.2 });
+          } else if (dy < 0 && vv.y < 0) {
+            Body.setVelocity(body, { x: vv.x * 0.7, y: Math.abs(vv.y) * 0.45 });
+          } else if (dx > 0 && vv.x > 0) {
+            Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.45 - 1.2, y: vv.y });
+          } else if (dx < 0 && vv.x < 0) {
+            Body.setVelocity(body, { x: Math.abs(vv.x) * 0.45, y: vv.y });
+          }
+        }
+      }
+    };
+    // прогноз до шага: скорость, уводящая bounds за край, гасится заранее
     for (const body of pieces) {
-      const pp = body.position;
       const vv = body.velocity;
-      const willBottom = pp.y + vv.y > H() - edge;
-      const willLeft = pp.x + vv.x < edge;
-      const willRight = pp.x + vv.x > W() - edge;
-      const willTop = pp.y + vv.y < edge;
-      if (willBottom || willLeft || willRight || willTop) {
-        const nx = Math.min(Math.max(pp.x + vv.x, edge + 20), W() - edge - 20);
-        const ny = Math.min(Math.max(pp.y + vv.y, edge + 20), H() - edge - 20);
-        Body.setPosition(body, {
-          x: willLeft ? edge + 20 : willRight ? W() - edge - 20 : nx,
-          y: willBottom ? H() - edge - 20 : willTop ? edge + 20 : ny,
-        });
-        Body.setVelocity(body, {
-          x: willLeft ? Math.abs(vv.x) * 0.5 + 1 : willRight ? -Math.abs(vv.x) * 0.5 - 1 : vv.x,
-          y: willBottom ? -Math.abs(vv.y) * 0.5 - 1 : willTop ? Math.abs(vv.y) * 0.5 : vv.y,
-        });
+      if (body.bounds.max.y + vv.y > H() - 4 && vv.y > 0) {
+        Body.setVelocity(body, { x: vv.x, y: -Math.abs(vv.y) * 0.4 - 1 });
+      }
+      if (body.bounds.min.x + vv.x < 2 && vv.x < 0) {
+        Body.setVelocity(body, { x: Math.abs(vv.x) * 0.4 + 1, y: vv.y });
+      }
+      if (body.bounds.max.x + vv.x > W() - 4 && vv.x > 0) {
+        Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.4 - 1, y: vv.y });
       }
     }
-    // Страховка от убеговших: тело за пределами мира (тоннель, вырожденный
-    // полигон) падает вечно и шумит — списываем его.
+    clampBounds(false);
+    // страховка от убеговших (тоннель/вырожденный полигон)
     let escaped: Body | null = null;
     for (const body of pieces) {
       if (
@@ -542,15 +567,45 @@ export async function createPlayground(
       pieces.delete(escaped);
       if (pieces.size === 0) scheduleBinExit();
     }
+    // бросок считается по МЫШИ (она = рука, 1:1 с махом): тело-то отстаёт
+    // от пружины MouseConstraint и на релизе «не долетает».
     if (mc.body) {
-      const meta = mc.body.plugin?.meta as PieceMeta | undefined;
-      if (meta) {
-        throwHistory.push({
-          t: engine.timing.timestamp,
-          x: mc.body.position.x,
-          y: mc.body.position.y,
-        });
-        if (throwHistory.length > 6) throwHistory.shift();
+      throwHistory.push({
+        t: engine.timing.timestamp,
+        x: mouse.position.x,
+        y: mouse.position.y,
+      });
+      if (throwHistory.length > 6) throwHistory.shift();
+    }
+  });
+
+  // Страховка после шага: физика всё равно протолкнула тело за край —
+  // мгновенно возвращаем (один кадр, без видимого провала).
+  Events.on(engine, 'afterUpdate', () => {
+    const left = 2;
+    const top = 2;
+    for (const body of pieces) {
+      const b = body.bounds;
+      const maxY = H() - 4;
+      const maxX = W() - 4;
+      if (b.max.y > maxY || b.max.x > maxX || b.min.x < left || b.min.y < top) {
+        const dx = b.max.x > maxX ? b.max.x - maxX : b.min.x < left ? b.min.x - left : 0;
+        const dy = b.max.y > maxY ? b.max.y - maxY : b.min.y < top ? b.min.y - top : 0;
+        Body.setPosition(body, { x: body.position.x - dx, y: body.position.y - dy });
+      }
+    }
+  });
+
+  // Вращение: тупые куски крутятся сами себя — гасим и утяжеляем момент.
+  Events.on(engine, 'beforeUpdate', () => {
+    for (const body of pieces) {
+      if (Math.abs(body.angularVelocity) > 0.001) {
+        Body.setAngularVelocity(body, body.angularVelocity * 0.97);
+      }
+      const sp = Math.hypot(body.velocity.x, body.velocity.y);
+      if (sp > 42) {
+        const k = 42 / sp;
+        Body.setVelocity(body, { x: body.velocity.x * k, y: body.velocity.y * k });
       }
     }
   });
@@ -562,6 +617,7 @@ export async function createPlayground(
     const meta = body.plugin?.meta as PieceMeta | undefined;
     if (!meta) return;
     if (body === nailBody) nailGrabbed = true;
+    Body.setAngularVelocity(body, 0); // взял — кусок перестаёт крутиться сам
     meta.grabScale = 1.05;
     meta.el.classList.add('physics-piece--grab');
     grabOffset = { x: mouse.position.x - body.position.x, y: mouse.position.y - body.position.y };
@@ -589,10 +645,11 @@ export async function createPlayground(
       vy *= THROW_CAP / mag;
     }
     Body.setVelocity(body, { x: vx, y: vy });
-    // Подкрутка от точки захвата: чем дальше взял от центра, тем сильнее крутится.
+    // Подкрутка от точки захвата: чем дальше взял от центра, тем сильнее
+    // крутится; вращение ленивое (инерция утяжелена) — не «юла».
     const spin =
-      (grabOffset.x * vy - grabOffset.y * vx) / (200 + grabOffset.x ** 2 + grabOffset.y ** 2);
-    Body.setAngularVelocity(body, Math.max(-0.55, Math.min(0.55, spin)));
+      (grabOffset.x * vy - grabOffset.y * vx) / (320 + grabOffset.x ** 2 + grabOffset.y ** 2);
+    Body.setAngularVelocity(body, Math.max(-0.3, Math.min(0.3, spin)));
     // Отпустил в зоне слота — прибиваем сразу, не дожидаясь остановки:
     // на подлёте кусок слишком быстр, и триггер «почти стоит» его пропускает.
     if (body === nailBody && nailArmed && anchorRect) {
@@ -810,6 +867,8 @@ export async function createPlayground(
           density: opts.density ?? 0.0028,
           plugin: { meta },
         });
+        // Утяжелённый момент инерции: кусок не крутится «юлой» от любого чиха.
+        Body.setInertia(body, body.inertia * 3);
         if (opts.kickUp) Body.setVelocity(body, { x: 0, y: -opts.kickUp });
         pieces.add(body);
         Composite.add(engine.world, body);
@@ -871,12 +930,13 @@ export async function createPlayground(
       img.alt = '';
       binEl.appendChild(img);
       scene.appendChild(binEl);
-      binBody = Bodies.rectangle(0, 0, w * 0.52, h * 0.98, {
+      // Сенсор создаётся, но В МИР НЕ ДОБАВЛЯЕТСЯ до первого захвата куска:
+      // иначе летящие в левый нижний угол куски пропадают в невидимую корзину.
+      binBody = Bodies.rectangle(0, 0, w * 0.62, h * 0.45 * 0.85, {
         isStatic: true,
         isSensor: true,
         plugin: { bin: true },
       });
-      Composite.add(engine.world, binBody);
       placeBin();
     },
 

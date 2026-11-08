@@ -51,12 +51,19 @@ export function Header() {
   const { activeId } = useSheetsObserver();
   const reduced = useMedia('(prefers-reduced-motion: reduce)');
   const { addChange } = useChangeLog();
-  const [cad, setCad] = useState(cadOn);
-  const themeBtnRef = useRough<HTMLButtonElement>('stamp', 501, () => ({
-    colorKey: 'accent',
-    padding: 3,
-  }));
   const [stage, setStage] = useState<ThemeStage>(0);
+  const [cad, setCad] = useState(cadOn);
+  // deps [stage]: слот на stage 3 unmount'ит кнопку — при возврате (stage 0)
+  // узел новый, обводку надо перерегистрировать, иначе она остаётся плоской.
+  const themeBtnRef = useRough<HTMLButtonElement>(
+    'stamp',
+    501,
+    () => ({
+      colorKey: 'accent',
+      padding: 3,
+    }),
+    [stage],
+  );
   // Кнопка прибита намертво: не качается, не срывается, гвозди живут.
   const [nailed, setNailed] = useState(false);
   const playgroundRef = useRef<Playground | null>(null);
@@ -219,9 +226,11 @@ export function Header() {
   }, [stage, nailed, themeBtnRef]);
 
   const onThemeClick = () => {
-    // Прибитая кнопка мертва: ни смены темы, ни штампа, ни вобла — гвозди держат.
+    // Прибитая кнопка продолжает переключать тему, но гвозди держат её:
+    // ни вобла, ни отрыва, ни лишних штампов ревизии.
     if (nailed) {
-      knock(0.15);
+      toggleTheme();
+      knock(0.3);
       return;
     }
     toggleTheme();
