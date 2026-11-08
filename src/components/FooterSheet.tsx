@@ -18,9 +18,10 @@ export function FooterSheet() {
     650,
     () => ({
       colorKey: 'accent',
-      // В стороны — с запасом: контур не должен идти вплотную к тексту.
-      paddingX: 40,
-      paddingY: 18,
+      // Ближе к таблице, но с небольшим запасом; верхняя кромка не достаёт
+      // до надписи листа (борд опущен margin-top'ом в CSS, зазор > paddingY+jitter).
+      paddingX: 16,
+      paddingY: 10,
       jitter: 10,
       roughness: 2.1,
       fillStyle: 'hachure',
