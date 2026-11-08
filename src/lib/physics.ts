@@ -13,6 +13,7 @@ import type { Engine, Body, Mouse as MatterMouse } from 'matter-js';
 import { Delaunay } from 'd3-delaunay';
 import { gsap } from './gsap';
 import { playNailFx } from './nailFx';
+import { knock } from './knock';
 import binSrc from '../assets/bin.png';
 
 export interface FragmentOptions {
@@ -29,6 +30,8 @@ export interface FragmentOptions {
   rect?: { left: number; top: number; width: number; height: number };
   /** Подскок вверх при отрыве (px/шаг) — кусок «срывается с гвоздей». */
   kickUp?: number;
+  /** Строка сначала падает цельной; от первого удара — осколки. */
+  delayed?: boolean;
 }
 
 export interface Playground {
@@ -52,6 +55,7 @@ interface Pt {
 type MouseWithHandlers = MatterMouse & {
   mousemove: (e: MouseEvent | TouchEvent) => void;
   mouseup: (e: MouseEvent | TouchEvent) => void;
+  mousedown: (e: MouseEvent | TouchEvent) => void;
 };
 
 interface PieceMeta {
@@ -70,9 +74,14 @@ interface PieceMeta {
   splitDepth: number;
   area: number;
   grabScale: number;
+  /** Строка: сначала падает ЦЕЛЬНОЙ, от первого удара — вороной-осколки. */
+  pendingShatter?: boolean;
+  shardCount?: number;
   /** Скорость до шага: в collisionStart она уже частично погашена резолвером —
    *  кэшируем значение из beforeUpdate для стабильного порога. */
   prevSpeed: number;
+  /** Сколько тиков кусок с pendingShatter пролежал почти неподвижно. */
+  restTicks?: number;
 }
 
 const SPLIT_SPEED = 9; // скорость докалывания осколка уровня 0
@@ -240,14 +249,30 @@ export async function createPlayground(
   buildWalls();
 
   const mouse = Mouse.create(scene) as MouseWithHandlers;
-  // MouseConstraint слушает mousemove/mouseup на сцене, но сцена стоит с
-  // pointer-events: none — события над страницей через неё не всплывают.
-  // Без перевеса на window кусок прилипает к курсору при любом быстром
-  // броске (релиз мимо куска не доходит до движка).
+  // MouseConstraint слушает mousemove/mouseup/mousedown на сцене, но сцена
+  // стоит с pointer-events: none — события над страницей через неё не
+  // всплывают (mousedown доходит, только если попал точно в кусок; нажал
+  // рядом и потянул — захват не случится никогда, кусок у края «не берётся»).
+  // Все три переводим на window.
   scene.removeEventListener('mousemove', mouse.mousemove);
   scene.removeEventListener('mouseup', mouse.mouseup);
+  scene.removeEventListener('mousedown', mouse.mousedown);
   window.addEventListener('mousemove', mouse.mousemove, { passive: true });
   window.addEventListener('mouseup', mouse.mouseup, { passive: true });
+  window.addEventListener('mousedown', mouse.mousedown);
+  // Релиз «залипшей» кнопки: mouseup за краем окна до Matter не доходит,
+  // и движок считает кнопку зажатой вечно; пролетающий мимо курсора кусок
+  // тогда перехватывается «за хвост» и выдёргивается за экран. Первый же
+  // mousemove без зажатых кнопок гасит захват.
+  const onStuckButtonMove = (e: MouseEvent) => {
+    if (e.buttons === 0 && mouse.button === 0) mouse.mouseup(e);
+  };
+  // То же при потере фокуса окна (alt-tab посреди броска).
+  const onWindowBlur = () => {
+    if (mouse.button === 0) mouse.button = -1;
+  };
+  window.addEventListener('mousemove', onStuckButtonMove);
+  window.addEventListener('blur', onWindowBlur);
   const mc = MouseConstraint.create(engine, {
     mouse,
     // 0.1 слишком мягко для тяжёлых осколков: еле ползут за мышью. Бросок
@@ -438,6 +463,67 @@ export async function createPlayground(
     }
   };
 
+  /** Цельная строка разваливается на вороной-осколки от точки контакта. */
+  const shatterPending = (body: Body, meta: PieceMeta, pair: { collision?: { supports?: { x: number; y: number }[] } }) => {
+    if (!meta.src || !meta.el) return;
+    const contact = pair.collision?.supports?.[0];
+    const impact = contact ?? { x: body.position.x, y: body.position.y };
+    const count = meta.shardCount ?? 10;
+    const w = meta.rectW;
+    const h = meta.rectH;
+    const left = body.position.x - w / 2;
+    const top = body.position.y - h / 2;
+    const pts: Pt[] = [
+      {
+        x: Math.min(Math.max(impact.x - left, 20), w - 20),
+        y: Math.min(Math.max(impact.y - top, 10), h - 10),
+      },
+    ];
+    for (let i = 1; i < count; i += 1) {
+      pts.push({
+        x: 20 + Math.random() * (w - 40),
+        y: 10 + Math.random() * (h - 20),
+      });
+    }
+    const cells: Pt[][] = [];
+    const delaunay = Delaunay.from(
+      pts,
+      (q) => q.x,
+      (q) => q.y,
+    );
+    const vor = delaunay.voronoi([0, 0, w, h]);
+    for (let i = 0; i < pts.length; i += 1) {
+      const cell = vor.cellPolygon(i);
+      if (!cell || cell.length < 4) continue;
+      cells.push(cell.slice(0, -1).map((q) => ({ x: q[0], y: q[1] })));
+    }
+    const v = body.velocity;
+    const el = meta.el;
+    removePiece(body);
+    for (const poly of cells) {
+      if (poly.length < 3 || polyArea(poly) < MIN_SHARD_AREA) continue;
+      const centroid = polyCentroid(poly);
+      const dx = centroid.x - w / 2;
+      const dy = centroid.y - h / 2;
+      const dir = Math.hypot(dx, dy) || 1;
+      const kick = 1.8 + Math.random() * 2.2;
+      makeShard(
+        el,
+        w,
+        h,
+        poly,
+        { x: left + centroid.x, y: top + centroid.y },
+        0,
+        {
+          x: v.x * 0.5 + (dx / dir) * kick,
+          y: v.y * 0.5 + (dy / dir) * kick - 1.4,
+        },
+        0,
+      );
+    }
+    knock(0.5);
+  };
+
   /** Корзина не аннигилирует: тело уходит из мира сразу, а клон доедает
    *  инерцию внутрь корзины и растворяется на глазах. */
   const swallowPiece = (body: Body, bin: Body) => {
@@ -465,6 +551,35 @@ export async function createPlayground(
   };
 
   // --- столкновения -------------------------------------------------------
+  type PairLike = { collision?: { supports?: Pt[]; normal?: Pt } };
+  type ImpactSpeed = { full: number; normal: number };
+
+  /** Скорость удара в точке контакта: скорость центра + ω×r относительно
+   *  соседа. full — полная величина (триггеры «сменить тему»/«разбиться»:
+   *  скользящий удар о стену тоже ощутимый контакт), normal — проекция на
+   *  нормаль столкновения (докалывание осколков: важен именно встречный
+   *  удар). prevSpeed (скорость ЦЕНТРА до шага) слепа к вращению и к
+   *  последнему шагу гравитации — триггеры пропускали первый отскок.
+   *  В collisionStart скорость ещё ДО резолвера — это полная скорость удара. */
+  const contactImpactSpeed = (body: Body, other: Body, pair: PairLike): ImpactSpeed => {
+    const sup = pair.collision?.supports?.[0];
+    const rx = (sup ? sup.x : body.position.x) - body.position.x;
+    const ry = (sup ? sup.y : body.position.y) - body.position.y;
+    let vx = body.velocity.x - body.angularVelocity * ry;
+    let vy = body.velocity.y + body.angularVelocity * rx;
+    if (!other.isStatic) {
+      const ox = (sup ? sup.x : other.position.x) - other.position.x;
+      const oy = (sup ? sup.y : other.position.y) - other.position.y;
+      vx -= other.velocity.x - other.angularVelocity * oy;
+      vy -= other.velocity.y + other.angularVelocity * ox;
+    }
+    const n = pair.collision?.normal;
+    return {
+      full: Math.hypot(vx, vy),
+      normal: Math.abs(vx * (n ? n.x : 0) + vy * (n ? n.y : 1)),
+    };
+  };
+
   Events.on(engine, 'collisionStart', (e) => {
     for (const pair of e.pairs) {
       const [a, b] = [pair.bodyA, pair.bodyB];
@@ -480,13 +595,21 @@ export async function createPlayground(
           swallowPiece(body, other);
           continue;
         }
-        const speed = meta.prevSpeed;
-        if (speed > 3) hooks.onImpact?.(meta.el, speed);
+        const impact = contactImpactSpeed(body, other, pair);
+        const speed = Math.max(meta.prevSpeed, impact.full);
+        // Гейт = порогу видимого отскока matter (_restingThresh 2) с гистерезисом.
+        if (speed > 2.5) hooks.onImpact?.(meta.el, speed);
+        // Цельная строка: первый ощутимый удар — развал на вороной-осколки.
+        if (meta.pendingShatter && speed > 2) {
+          shatterPending(body, meta, pair);
+          continue;
+        }
         if (
           meta.kind === 'shard' &&
           meta.canSplit &&
           meta.area > MIN_SPLIT_AREA &&
-          speed > (meta.splitDepth === 0 ? SPLIT_SPEED : SPLIT_SPEED_2)
+          Math.max(meta.prevSpeed, impact.normal) >
+            (meta.splitDepth === 0 ? SPLIT_SPEED : SPLIT_SPEED_2)
         ) {
           splitShard(body, meta);
         }
@@ -498,56 +621,59 @@ export async function createPlayground(
   const throwHistory: { t: number; x: number; y: number }[] = [];
   let grabOffset: Pt = { x: 0, y: 0 };
 
+  // Твинов-погонщиков границы не касаются: тело, СТОЯЩЕЕ на полу, имеет
+  // bounds.max.y = H() — норма. Страховка срабатывает только на РЕАЛЬНЫЙ
+  // выход за видимую область (после шага, в afterUpdate).
   Events.on(engine, 'beforeUpdate', () => {
+    // Цель пружины захвата держим внутри вьюпорта: mouse.position из события
+    // может лежать ЗА краем (флик вниз у пола, курсор ушёл за окно) —
+    // позиционный солвер констрейнта двигает тело БЕЗ оглядки на кап
+    // скорости, и кусок вдавливается в 240px стену и залипает «под экраном».
+    if (mc.body) {
+      const mp = mouse.position;
+      const cy2 = Math.min(Math.max(mp.y, 8), H() - 8);
+      const cx2 = Math.min(Math.max(mp.x, 8), W() - 8);
+      if (cy2 !== mp.y || cx2 !== mp.x) {
+        mp.x = cx2;
+        mp.y = cy2;
+      }
+    }
     for (const body of pieces) {
       const meta = body.plugin.meta as PieceMeta | undefined;
       if (meta) meta.prevSpeed = body.speed;
-    }
-    // ЖЁСТКИЕ ГРАНИЦЫ: bounds тела не имеют права пересечь видимую область —
-    // ни на прогнозе, ни на факте. Двойная защита: до шага и после него.
-    const clampBounds = (hard: boolean) => {
-      const top = 2;
-      const left = 2;
-      for (const body of pieces) {
-        const b = body.bounds;
-        const maxY = H() - 4;
-        const maxX = W() - 4;
-        const out =
-          b.max.y > maxY || b.min.y < top || b.max.x > maxX || b.min.x < left;
-        if (!out) continue;
-        const dx =
-          b.max.x > maxX ? b.max.x - maxX : b.min.x < left ? b.min.x - left : 0;
-        const dy = b.max.y > maxY ? b.max.y - maxY : b.min.y < top ? b.min.y - top : 0;
-        if (hard || !hard) {
-          // сдвигаем тело внутрь ровно на величину выхода
-          Body.setPosition(body, { x: body.position.x - dx, y: body.position.y - dy });
-          const vv = body.velocity;
-          if (dy > 0 && vv.y > 0) {
-            Body.setVelocity(body, { x: vv.x * 0.7, y: -Math.abs(vv.y) * 0.45 - 1.2 });
-          } else if (dy < 0 && vv.y < 0) {
-            Body.setVelocity(body, { x: vv.x * 0.7, y: Math.abs(vv.y) * 0.45 });
-          } else if (dx > 0 && vv.x > 0) {
-            Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.45 - 1.2, y: vv.y });
-          } else if (dx < 0 && vv.x < 0) {
-            Body.setVelocity(body, { x: Math.abs(vv.x) * 0.45, y: vv.y });
+      // Страховка «мёртвого целого» строки: если она заспавнилась внахлёст
+      // с полом/полкой, первый контакт происходит на нулевой скорости и
+      // шаттер-порог не берётся — строка остаётся целой навсегда. Пролежала
+      // ~0.7с почти неподвижно (и её не держат) — рассыпаемся на месте.
+      if (meta?.pendingShatter) {
+        if (
+          mc.body !== body &&
+          body.speed < 0.6 &&
+          Math.abs(body.angularVelocity) < 0.02
+        ) {
+          meta.restTicks = (meta.restTicks ?? 0) + 1;
+          if (meta.restTicks > 42) {
+            shatterPending(body, meta, {
+              collision: {
+                supports: [{ x: body.position.x, y: body.position.y + meta.rectH / 2 }],
+              },
+            });
+            continue;
           }
+        } else {
+          meta.restTicks = 0;
         }
       }
-    };
-    // прогноз до шага: скорость, уводящая bounds за край, гасится заранее
-    for (const body of pieces) {
-      const vv = body.velocity;
-      if (body.bounds.max.y + vv.y > H() - 4 && vv.y > 0) {
-        Body.setVelocity(body, { x: vv.x, y: -Math.abs(vv.y) * 0.4 - 1 });
+      // угловое затухание и общий кап скорости — против «юлы» и тоннелей
+      if (Math.abs(body.angularVelocity) > 0.001) {
+        Body.setAngularVelocity(body, body.angularVelocity * 0.97);
       }
-      if (body.bounds.min.x + vv.x < 2 && vv.x < 0) {
-        Body.setVelocity(body, { x: Math.abs(vv.x) * 0.4 + 1, y: vv.y });
-      }
-      if (body.bounds.max.x + vv.x > W() - 4 && vv.x > 0) {
-        Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.4 - 1, y: vv.y });
+      const sp = Math.hypot(body.velocity.x, body.velocity.y);
+      if (sp > 42) {
+        const k = 42 / sp;
+        Body.setVelocity(body, { x: body.velocity.x * k, y: body.velocity.y * k });
       }
     }
-    clampBounds(false);
     // страховка от убеговших (тоннель/вырожденный полигон)
     let escaped: Body | null = null;
     for (const body of pieces) {
@@ -562,10 +688,26 @@ export async function createPlayground(
     }
     if (escaped) {
       const meta = escaped.plugin.meta as PieceMeta | undefined;
-      if (meta?.el) meta.el.remove();
-      Composite.remove(engine.world, escaped);
-      pieces.delete(escaped);
-      if (pieces.size === 0) scheduleBinExit();
+      // Захват мог остаться на убеговшем теле — иначе constraint держит
+      // сирену, а «залипшая» кнопка мыши перехватывает следующий кусок.
+      if (mc.body === escaped) {
+        mc.constraint.bodyB = null;
+        (mc as unknown as { body: Body | null }).body = null;
+      }
+      if (meta?.kind === 'solid') {
+        // Целую деталь (кнопку) не списываем — без неё тема недоступна до
+        // перезагрузки. Возвращаем в вьюпорт сверху и отпускаем заново.
+        if (meta.el) meta.el.classList.remove('physics-piece--grab');
+        meta.grabScale = 1;
+        Body.setPosition(escaped, { x: W() / 2, y: Math.max(80, H() * 0.2) });
+        Body.setVelocity(escaped, { x: 0, y: 0 });
+        Body.setAngularVelocity(escaped, 0);
+      } else {
+        if (meta?.el) meta.el.remove();
+        Composite.remove(engine.world, escaped);
+        pieces.delete(escaped);
+        if (pieces.size === 0) scheduleBinExit();
+      }
     }
     // бросок считается по МЫШИ (она = рука, 1:1 с махом): тело-то отстаёт
     // от пружины MouseConstraint и на релизе «не долетает».
@@ -579,33 +721,37 @@ export async function createPlayground(
     }
   });
 
-  // Страховка после шага: физика всё равно протолкнула тело за край —
-  // мгновенно возвращаем (один кадр, без видимого провала).
+  // Страховка ПОСЛЕ шага: тело целиком ушло за видимую область (угловой
+  // удар протолкнул bounds через край) — возвращаем внутрь с лёгким
+  // отскоком. Лежащие на полу тела (bounds.max.y = H) не трогаем.
   Events.on(engine, 'afterUpdate', () => {
-    const left = 2;
-    const top = 2;
     for (const body of pieces) {
       const b = body.bounds;
-      const maxY = H() - 4;
-      const maxX = W() - 4;
-      if (b.max.y > maxY || b.max.x > maxX || b.min.x < left || b.min.y < top) {
-        const dx = b.max.x > maxX ? b.max.x - maxX : b.min.x < left ? b.min.x - left : 0;
-        const dy = b.max.y > maxY ? b.max.y - maxY : b.min.y < top ? b.min.y - top : 0;
-        Body.setPosition(body, { x: body.position.x - dx, y: body.position.y - dy });
+      let dx = 0;
+      let dy = 0;
+      if (b.max.y > H() + 6) dy = b.max.y - (H() - 2);
+      else if (b.min.y < -6) dy = b.min.y + 2;
+      if (b.max.x > W() + 6) dx = b.max.x - (W() - 2);
+      else if (b.min.x < -6) dx = b.min.x + 2;
+      if (!dx && !dy) continue;
+      Body.setPosition(body, { x: body.position.x - dx, y: body.position.y - dy });
+      const vv = body.velocity;
+      if (dy > 0 && vv.y > 0) {
+        Body.setVelocity(body, { x: vv.x * 0.7, y: -Math.abs(vv.y) * 0.4 - 1 });
+      } else if (dy < 0 && vv.y < 0) {
+        Body.setVelocity(body, { x: vv.x * 0.7, y: Math.abs(vv.y) * 0.4 });
+      } else if (dx > 0 && vv.x > 0) {
+        Body.setVelocity(body, { x: -Math.abs(vv.x) * 0.45 - 1, y: vv.y });
+      } else if (dx < 0 && vv.x < 0) {
+        Body.setVelocity(body, { x: Math.abs(vv.x) * 0.45, y: vv.y });
       }
-    }
-  });
-
-  // Вращение: тупые куски крутятся сами себя — гасим и утяжеляем момент.
-  Events.on(engine, 'beforeUpdate', () => {
-    for (const body of pieces) {
-      if (Math.abs(body.angularVelocity) > 0.001) {
-        Body.setAngularVelocity(body, body.angularVelocity * 0.97);
-      }
-      const sp = Math.hypot(body.velocity.x, body.velocity.y);
-      if (sp > 42) {
-        const k = 42 / sp;
-        Body.setVelocity(body, { x: body.velocity.x * k, y: body.velocity.y * k });
+      // Отражённую скорость тоже капим: иначе рывок констрейнта внутри тика
+      // (он не проходит через кап в beforeUpdate) превращает возврат с кромки
+      // в новый сквозной панч.
+      const vr = Math.hypot(body.velocity.x, body.velocity.y);
+      if (vr > 12) {
+        const k2 = 12 / vr;
+        Body.setVelocity(body, { x: body.velocity.x * k2, y: body.velocity.y * k2 });
       }
     }
   });
@@ -622,6 +768,16 @@ export async function createPlayground(
     meta.el.classList.add('physics-piece--grab');
     grabOffset = { x: mouse.position.x - body.position.x, y: mouse.position.y - body.position.y };
     throwHistory.length = 0;
+    // Захват летящего куска «за хвост» (курсор далеко от центра, кнопка
+    // мыши «залипла») даёт пружине гигантское плечо pointB: позиционный
+    // солвер телепортирует кусок сквозь 240px стены за пару тиков. Плечо
+    // укорачиваем — пружина мягко дотащит центр к курсору.
+    const pb = mc.constraint.pointB;
+    if (pb) {
+      const arm = Math.hypot(pb.x, pb.y);
+      const maxArm = 48;
+      if (arm > maxArm) mc.constraint.pointB = { x: (pb.x * maxArm) / arm, y: (pb.y * maxArm) / arm };
+    }
   });
 
   Events.on(mc as never, 'enddrag', (e: unknown) => {
@@ -874,6 +1030,55 @@ export async function createPlayground(
         Composite.add(engine.world, body);
         return body;
       }
+      // Отложенный шаттер: строка сначала падает ЦЕЛЬНОЙ деталью, от первого
+      // удара об пол/стенку разваливается на вороной-осколки (просьба юзера).
+      if (opts.delayed) {
+        const clone2 = el.cloneNode(true) as HTMLElement;
+        clone2.classList.add('physics-piece', 'physics-shard');
+        clone2.style.visibility = 'visible';
+        clone2.style.opacity = '';
+        clone2.removeAttribute('data-theme-stamp');
+        clone2
+          .querySelectorAll('button, a, input, select, textarea')
+          .forEach((n) => n.setAttribute('tabindex', '-1'));
+        clone2.style.width = `${rect.width}px`;
+        clone2.style.height = `${rect.height}px`;
+        clone2.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0)`;
+        scene.appendChild(clone2);
+        const metaD: PieceMeta = {
+          el: clone2,
+          src: el,
+          rectW: rect.width,
+          rectH: rect.height,
+          cx: rect.width / 2,
+          cy: rect.height / 2,
+          kind: 'solid',
+          canSplit: false,
+          splitDepth: 0,
+          area: rect.width * rect.height,
+          grabScale: 1,
+          prevSpeed: 0,
+          pendingShatter: true,
+          shardCount: opts.shards ?? 10,
+        };
+        const solid = Bodies.rectangle(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+          rect.width,
+          rect.height,
+          {
+            restitution: 0.45,
+            friction: 0.08,
+            frictionAir: 0.015,
+            density: 0.0022,
+            plugin: { meta: metaD },
+          },
+        );
+        Body.setInertia(solid, solid.inertia * 2.5);
+        pieces.add(solid);
+        Composite.add(engine.world, solid);
+        return null;
+      }
       // shatter: вороной по прямоугольнику элемента, осколки разлетаются от точки удара.
       const count = opts.shards ?? 9;
       const inset = 10;
@@ -971,6 +1176,9 @@ export async function createPlayground(
       // замыканием на мёртвую сцену, и движок не собирается GC.
       window.removeEventListener('mousemove', mouse.mousemove);
       window.removeEventListener('mouseup', mouse.mouseup);
+      window.removeEventListener('mousedown', mouse.mousedown);
+      window.removeEventListener('mousemove', onStuckButtonMove);
+      window.removeEventListener('blur', onWindowBlur);
       window.removeEventListener('touchend', onWindowTouchEnd);
       // Поздний onDone после destroy никуда вести не должен.
       nailDone = null;

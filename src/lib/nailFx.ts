@@ -124,13 +124,35 @@ export function playNailFx(host: HTMLElement, opts: NailFxOptions = {}): void {
   };
 
   if (reduced) {
-    nails.forEach(setFixed);
-    hammer.style.display = 'none';
-    if (persistNails) persistNailsIn(host, nails);
-    window.setTimeout(() => {
-      fx.remove();
-      onDone?.();
-    }, 340);
+    // prefers-reduced-motion: размашистую анимацию глушим, но сам факт
+    // прибивания показываем — короткие удары без замахов. Иначе молоток
+    // и гвозди «просто исчезают» (жалоба юзера: пнг больше не видно).
+    const tlR = gsap.timeline({
+      onComplete: () => {
+        if (persistNails) persistNailsIn(host, nails);
+        fx.remove();
+        onDone?.();
+      },
+    });
+    nails.forEach((nail, i) => {
+      const at = i * 0.17;
+      tlR
+        .fromTo(
+          hammer,
+          { y: -14, rotation: side === 1 ? -96 : 96 },
+          { y: 0, rotation: side === 1 ? -88 : 88, duration: 0.1, ease: 'power2.in' },
+          at,
+        )
+        .call(
+          () => {
+            setFixed(nail);
+            knock(0.9 - i * 0.12);
+          },
+          undefined,
+          at + 0.1,
+        );
+    });
+    tlR.to({}, { duration: 0.12 });
     return;
   }
 

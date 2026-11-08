@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
 import { gsap } from '../lib/gsap';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
@@ -64,13 +63,10 @@ export function ContactsSheet() {
 
   /** 7.2 + 10 + 11: вся строка TEL разбивается на полигональные осколки (вороной),
    *  докалывается о края экрана; корзина съедает их и уезжает — строка остаётся пустой. */
-  const breakPhoneRow = async (e: ReactMouseEvent<HTMLButtonElement>) => {
+  const breakPhoneRow = async () => {
     const row = phoneRowRef.current;
     if (!row || playgroundRef.current || startingRef.current) return;
     startingRef.current = true;
-    // Точка удара — центр кнопки «РАСКРЫТЬ»: осколки летят от неё. Снимаем до await.
-    const btnRect = e.currentTarget.getBoundingClientRect();
-    const impact = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 };
     addChange(t.footer.dynamic.phone);
     try {
       const { createPlayground } = await import('../lib/physics');
@@ -83,7 +79,8 @@ export function ContactsSheet() {
       }
       playgroundRef.current = pg;
       // Сначала режем строку (кнопка ещё в ней — уходит в осколки), потом снимаем state.
-      pg.fragmentize(row, { mode: 'shatter', impact });
+      // Строка падает ЦЕЛЬНОЙ и разваливается от первого удара об пол (11).
+      pg.fragmentize(row, { mode: 'shatter', delayed: true, shards: 12 });
       setPhoneState('broken');
       pg.setBin(() => {
         knock(0.4);

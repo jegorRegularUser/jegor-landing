@@ -240,7 +240,7 @@ const t3 = await page.evaluate(() => ({
   pieces: document.querySelectorAll('.physics-piece').length,
   pieceTransform: document.querySelector('.physics-piece')?.style.transform?.slice(0, 60) ?? null,
   binClass: document.querySelector('.physics-bin')?.className ?? null,
-  sketch: !!document.querySelector('.sketch-cover'),
+  sketch: !!document.querySelector('.bsod'),
   nailBtn: [...document.querySelectorAll('header button')].some(
     (b) => b.textContent.trim() === 'ПРИБИТЬ',
   ),
@@ -385,14 +385,15 @@ await page.waitForTimeout(1300);
       await page.waitForTimeout(40);
     }
     await page.waitForTimeout(300);
-    await shot(page, 't4_cover');
+    await shot(page, 't4_bsod');
     await page.mouse.up();
-    await page.waitForTimeout(2000);
+    // BSOD: ~850мс на нуле + добегание процентов + перезагрузка — ждём с запасом
+    await page.waitForTimeout(6000);
   }
 }
 const t4 = await page.evaluate(() => ({
   marker: window.__marker ?? 'RELOADED',
-  sketch: !!document.querySelector('.sketch-cover'),
+  sketch: !!document.querySelector('.bsod'),
 }));
 log('T4 easter egg:', JSON.stringify(t4));
 

@@ -94,7 +94,18 @@ export function Header() {
 
   const wobble = (s: number) => {
     const btn = themeBtnRef.current;
-    if (!btn || reduced) return;
+    if (!btn) return;
+    // prefers-reduced-motion — размашистый эластичный вобл глушим, но
+    // короткий наклон оставляем: нажатие обязано отзываться поворотом
+    // (без этого кнопка кажется мёртвой — жалоба юзера).
+    if (reduced) {
+      gsap.fromTo(
+        btn,
+        { rotate: -4 * s },
+        { rotate: 0, duration: 0.22, ease: 'power2.out' },
+      );
+      return;
+    }
     gsap.fromTo(
       btn,
       { rotate: -7 * s, y: s * 4 },
@@ -108,18 +119,67 @@ export function Header() {
     );
   };
 
-  /** Пасхалка (16): страница зарастает рисованными линиями и перезагружается. */
-  const sketchCover = () => {
+  /** Декоративный QR для BSOD: три майндера + детерминированный «шум»
+   *  (фиксированный сид — узор всегда одинаковый, сканить нечего). */
+  const bsodQr = (): string => {
+    const n = 21;
+    let seed = 0x5eed;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    };
+    let cells = '';
+    for (let y = 0; y < n; y += 1) {
+      for (let x = 0; x < n; x += 1) {
+        // майндеры: три угла 7×7 (рамка + ядро 3×3), между ними — шум
+        const fx = x < 7 ? x : x - (n - 7);
+        const fy = y < 7 ? y : y - (n - 7);
+        const inFinder = (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
+        const on = inFinder
+          ? fx === 0 || fx === 6 || fy === 0 || fy === 6 || (fx >= 2 && fx <= 4 && fy >= 2 && fy <= 4)
+          : rnd() > 0.52;
+        if (on) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+      }
+    }
+    return `<svg class="bsod__qr" viewBox="0 0 21 21" aria-hidden="true">${cells}</svg>`;
+  };
+
+  /** Пасхалка (16): кнопку утащили в корзину — «сайт столкнулся с проблемой»
+   *  (BSOD, стоп-код THEME_BUTTON_NOT_FOUND) и перезагрузка. */
+  const bsodCrash = () => {
     const cover = document.createElement('div');
-    cover.className = 'sketch-cover';
-    cover.innerHTML = `<svg viewBox="0 0 1000 600" preserveAspectRatio="none">
-      ${Array.from({ length: 12 }, (_, i) => {
-        const y = 40 + i * 46;
-        return `<path d="M -20 ${y} C 250 ${y - 30} 750 ${y + 34} 1020 ${y - 12}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="1400" stroke-dashoffset="1400" style="animation: sketch-draw 0.7s ${i * 0.09}s forwards ease-out" />`;
-      }).join('')}
-    </svg>`;
+    cover.className = 'bsod';
+    cover.setAttribute('role', 'alert');
+    cover.innerHTML = `
+      <div class="bsod__col">
+        <div class="bsod__face" aria-hidden="true">${t.bsod.face}</div>
+        <p class="bsod__title">${t.bsod.title}</p>
+        <p class="bsod__note">${t.bsod.note}</p>
+        <p class="bsod__percent">${t.bsod.percent}<span class="bsod__percent-value">0</span>%</p>
+        <div class="bsod__meta">
+          ${bsodQr()}
+          <div class="bsod__info">
+            <p>${t.bsod.support}<span class="bsod__link">${t.bsod.link}</span></p>
+            <p>${t.bsod.stopcode}</p>
+            <p>${t.bsod.failed}</p>
+          </div>
+        </div>
+      </div>`;
+    // BSOD глушит прокрутку страницы (скроллбар под катком ломает вид);
+    // страница после этого перезагружается — восстанавливать нечего.
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
     document.body.appendChild(cover);
-    window.setTimeout(() => window.location.reload(), 1100);
+    // По-настоящему процент висит на нуле, потом добегает рывками — и перезагрузка.
+    const value = cover.querySelector('.bsod__percent-value');
+    let v = 0;
+    const tick = () => {
+      v = Math.min(100, v + Math.max(1, Math.round((100 - v) * 0.14 + Math.random() * 4)));
+      if (value) value.textContent = String(v);
+      if (v < 100) window.setTimeout(tick, 45 + Math.random() * 110);
+      else window.setTimeout(() => window.location.reload(), 600);
+    };
+    window.setTimeout(tick, 850);
   };
 
   /** Оторвать кнопку в физику: тема меняется на каждом отскоке (11). */
@@ -145,9 +205,12 @@ export function Header() {
       const { createPlayground } = await import('../lib/physics');
       const pg = await createPlayground(document.body, {
         onImpact: (_el, speed) => {
-          if (speed < 3) return;
+          // Порог = порогу видимого отскока в matter (_restingThresh 2) с
+          // небольшим гистерезисом: каждый реальный отскок щёлкает темой,
+          // лёгкие касания — нет.
+          if (speed < 2.5) return;
           const now = Date.now();
-          if (now - lastFlip.current < 400) return;
+          if (now - lastFlip.current < 300) return;
           lastFlip.current = now;
           toggleTheme();
           knock(Math.min(1, speed / 12));
@@ -164,7 +227,7 @@ export function Header() {
         rect,
         kickUp: 2.4,
       });
-      pg.setBin(sketchCover);
+      pg.setBin(bsodCrash);
       setPgReady(true);
     } catch (e) {
       // Физика недоступна: кнопка падает твинами, тема щёлкает на полпути.
@@ -226,11 +289,13 @@ export function Header() {
   }, [stage, nailed, themeBtnRef]);
 
   const onThemeClick = () => {
-    // Прибитая кнопка продолжает переключать тему, но гвозди держат её:
-    // ни вобла, ни отрыва, ни лишних штампов ревизии.
+    // Прибитая кнопка продолжает переключать тему и отзывается на нажатие:
+    // гвозди держат крепко, поэтому качание с половинной амплитудой —
+    // без отрыва и лишних штампов ревизии.
     if (nailed) {
       toggleTheme();
       knock(0.3);
+      wobble(0.5);
       return;
     }
     toggleTheme();

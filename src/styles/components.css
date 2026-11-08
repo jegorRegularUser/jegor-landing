@@ -1344,38 +1344,97 @@
   border-color: var(--accent);
 }
 
-.sketch-cover {
+/* --- пасхалка 16: BSOD «кнопку утащили в корзину» --- */
+/* Цвета не от темы — BSOD намеренно выбивается из ватмана: это «другая система». */
+.bsod {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: var(--bg);
-  color: var(--ink);
-  display: grid;
-  place-items: center;
+  background: #0078d7;
+  color: #fff;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  display: flex;
+  align-items: center;
   opacity: 0;
-  animation: cover-in 0.25s forwards;
+  animation: bsod-in 0.18s forwards;
 }
 
-.sketch-cover svg {
-  width: 100%;
-  height: 100%;
-  opacity: 0.75;
+.bsod__col {
+  padding: 0 max(6vw, 48px);
+  max-width: 760px;
+  display: grid;
+  gap: 14px;
 }
 
-@keyframes cover-in {
+.bsod__face {
+  font-size: clamp(56px, 9vw, 96px);
+  font-weight: 300;
+  line-height: 1;
+  margin: 0 0 6px -5px; /* хвост «(» оптически выравнивает строку по левому краю */
+}
+
+.bsod__title {
+  font-size: clamp(17px, 2.2vw, 23px);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.bsod__note {
+  font-size: clamp(14px, 1.8vw, 18px);
+  line-height: 1.45;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.bsod__percent {
+  font-size: clamp(15px, 2vw, 20px);
+  margin: 8px 0 14px;
+  font-variant-numeric: tabular-nums; /* процент не дёргает строку */
+}
+
+.bsod__meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.bsod__qr {
+  width: 92px;
+  height: 92px;
+  flex: none;
+  padding: 6px;
+  box-sizing: border-box;
+  background: #fff;
+  fill: #1b3a5c;
+}
+
+.bsod__info {
+  font-size: 13px;
+  line-height: 1.7;
+  opacity: 0.92;
+}
+
+.bsod__info p {
+  margin: 0;
+}
+
+.bsod__link {
+  text-decoration: underline;
+}
+
+@keyframes bsod-in {
   to {
     opacity: 1;
   }
 }
 
-@keyframes sketch-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .sketch-cover {
+  .bsod {
     animation-duration: 0.01s;
   }
 }

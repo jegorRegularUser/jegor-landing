@@ -256,6 +256,16 @@ export const en: Dict = {
     note: 'SHEETS 8 • SCALE 1:1',
     copyright: '© 2026 EGOR DVOINYAKOV',
   },
+  bsod: {
+    face: ':(',
+    title: 'Your site ran into a problem and needs to restart.',
+    note: "We're just collecting some error info, and then we'll restart for you.",
+    percent: 'Complete: ',
+    support: 'For more information about this issue: ',
+    link: '2026-f1/stopcode',
+    stopcode: 'Stop code: THEME_BUTTON_NOT_FOUND',
+    failed: 'What failed: theme-btn.dll',
+  },
   aria: {
     skip: 'Skip to content',
     region: 'Drawing set',
