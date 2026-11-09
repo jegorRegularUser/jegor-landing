@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
+import { certMeta } from '../assets/image-meta';
 import { Sheet } from './Sheet';
+import { BlurImage } from './BlurImage';
 import { PencilMark } from './PencilMark';
 
 const certPreviews = import.meta.glob<string>('../assets/certs/*.webp', {
@@ -13,6 +16,21 @@ const certPreviewsAvif = import.meta.glob<string>('../assets/certs/*.avif', {
   import: 'default',
 });
 const certFull = import.meta.glob<string>('../assets/certs/*.png', {
+  eager: true,
+  import: 'default',
+});
+/* Полноразмерные версии лайтбокса (1600px webp/avif вместо PNG) + LQIP.
+   Grep-паттерн *.webp/*.avif зацепит и *.blur.webp/*.full.* — поэтому
+   все lookup'ы строго по точным ключам `${file}.${ext}`. */
+const certFullWebp = import.meta.glob<string>('../assets/certs/*.full.webp', {
+  eager: true,
+  import: 'default',
+});
+const certFullAvif = import.meta.glob<string>('../assets/certs/*.full.avif', {
+  eager: true,
+  import: 'default',
+});
+const certBlur = import.meta.glob<string>('../assets/certs/*.blur.webp', {
   eager: true,
   import: 'default',
 });
@@ -52,6 +70,7 @@ function DiplomaCard({
   }));
   const preview = certPreviews[`../assets/certs/${item.file}.webp`];
   const previewAvif = certPreviewsAvif[`../assets/certs/${item.file}.avif`];
+  const meta = certMeta[item.file];
 
   return (
     <button
@@ -63,19 +82,18 @@ function DiplomaCard({
     >
       <div className="diploma-card__media" ref={mediaRef}>
         {preview && (
-          <picture>
-            {previewAvif && <source type="image/avif" srcSet={previewAvif} />}
-            <img
-              className="diploma-card__thumb"
-              src={preview}
-              alt={item.caption}
-              width={600}
-              height={424}
-              loading="lazy"
-              decoding="async"
-              fetchPriority="low"
-            />
-          </picture>
+          <BlurImage
+            lqip={certBlur[`../assets/certs/${item.file}.blur.webp`]}
+            src={preview}
+            sources={previewAvif ? [{ type: 'image/avif', srcSet: previewAvif }] : undefined}
+            className="diploma-card__thumb"
+            alt={item.caption}
+            width={meta?.pw}
+            height={meta?.ph}
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+          />
         )}
       </div>
       <span className="diploma-card__caption">
@@ -104,7 +122,10 @@ export function DiplomasSheet() {
     setOpenFile(null);
   };
 
-  const fullSrc = openFile ? certFull[`../assets/certs/${openFile}.png`] : undefined;
+  const fullPng = openFile ? certFull[`../assets/certs/${openFile}.png`] : undefined;
+  const fullWebp = openFile ? certFullWebp[`../assets/certs/${openFile}.full.webp`] : undefined;
+  const fullAvif = openFile ? certFullAvif[`../assets/certs/${openFile}.full.avif`] : undefined;
+  const openMeta = openFile ? certMeta[openFile] : undefined;
   const openCaption = t.diplomas.items.find((i) => i.file === openFile)?.caption;
 
   return (
@@ -137,7 +158,31 @@ export function DiplomasSheet() {
           if (e.target === dialogRef.current) close();
         }}
       >
-        {fullSrc && <img src={fullSrc} alt="" loading="eager" decoding="async" />}
+        {/* Лайтбокс: полная версия (1600px webp/avif, PNG — fallback) поверх
+            растянутого превью из кэша; размер сцены — из meta, без CLS. */}
+        {fullPng && (
+          <div
+            className="lightbox__stage"
+            style={
+              openMeta
+                ? ({ '--lb-ar': `${openMeta.w} / ${openMeta.h}` } as CSSProperties)
+                : undefined
+            }
+          >
+            <BlurImage
+              lqip={openFile ? certPreviews[`../assets/certs/${openFile}.webp`] : undefined}
+              src={fullPng}
+              sources={[
+                ...(fullAvif ? [{ type: 'image/avif', srcSet: fullAvif }] : []),
+                ...(fullWebp ? [{ type: 'image/webp', srcSet: fullWebp }] : []),
+              ]}
+              alt={openCaption ?? ''}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </div>
+        )}
         <div className="lightbox__bar">
           <span>{openCaption}</span>
           <button type="button" className="toggle-btn" onClick={close}>

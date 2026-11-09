@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { gsap } from '../lib/gsap';
 import { useRough } from '../rough/useRough';
 import { useLang } from '../i18n/LangContext';
 import type { Dict } from '../i18n/ru';
+import { screenMeta } from '../assets/image-meta';
 import { useMedia } from '../hooks/useMedia';
 import { Sheet } from './Sheet';
 import { DimLink } from './DimLink';
+import { BlurImage } from './BlurImage';
 import { PencilMark } from './PencilMark';
 
 type ProjectItem = Dict['projects']['items'][number];
@@ -18,11 +21,16 @@ const screensAvif = import.meta.glob<string>('../assets/screens/*.avif', {
   eager: true,
   import: 'default',
 });
+const screensBlur = import.meta.glob<string>('../assets/screens/*.blur.webp', {
+  eager: true,
+  import: 'default',
+});
 
-function screenFor(name: string): { webp?: string; avif?: string } {
+function screenFor(name: string): { webp?: string; avif?: string; blur?: string } {
   return {
     webp: screensWebp[`../assets/screens/${name}.webp`],
     avif: screensAvif[`../assets/screens/${name}.avif`],
+    blur: screensBlur[`../assets/screens/${name}.blur.webp`],
   };
 }
 
@@ -56,6 +64,7 @@ function FrameCarousel({
   const progressRef = useRef<SVGPathElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const zoomed = screenFor(screens[index]);
+  const zoomedMeta = screenMeta[screens[index]];
 
   const go = (next: number) => {
     const clamped = Math.max(0, Math.min(screens.length - 1, next));
@@ -81,6 +90,7 @@ function FrameCarousel({
       <div className="proj-carousel__track" style={{ transform: `translateX(-${index * 100}%)` }}>
         {screens.map((s, i) => {
           const shot = screenFor(s);
+          const dims = screenMeta[s];
           return (
             <div className="proj-carousel__slide" key={s}>
               {shot.webp ? (
@@ -90,17 +100,16 @@ function FrameCarousel({
                   aria-label={`${zoomAria}: ${name} — кадр ${i + 1}`}
                   onClick={() => dialogRef.current?.showModal()}
                 >
-                  <picture>
-                    {shot.avif && <source type="image/avif" srcSet={shot.avif} />}
-                    <img
-                      src={shot.webp}
-                      alt={`${name} — кадр ${i + 1}`}
-                      width={1280}
-                      height={800}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </picture>
+                  <BlurImage
+                    lqip={shot.blur}
+                    src={shot.webp}
+                    sources={shot.avif ? [{ type: 'image/avif', srcSet: shot.avif }] : undefined}
+                    alt={`${name} — кадр ${i + 1}`}
+                    width={dims?.w}
+                    height={dims?.h}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </button>
               ) : (
                 <div className="proj-slot" />
@@ -173,10 +182,24 @@ function FrameCarousel({
         }}
       >
         {zoomed.webp && (
-          <picture>
-            {zoomed.avif && <source type="image/avif" srcSet={zoomed.avif} />}
-            <img src={zoomed.webp} alt={`${name} — кадр ${index + 1}`} decoding="async" />
-          </picture>
+          <div
+            className="lightbox__stage"
+            style={
+              zoomedMeta
+                ? ({ '--lb-ar': `${zoomedMeta.w} / ${zoomedMeta.h}` } as CSSProperties)
+                : undefined
+            }
+          >
+            <BlurImage
+              lqip={zoomed.blur}
+              src={zoomed.webp}
+              sources={zoomed.avif ? [{ type: 'image/avif', srcSet: zoomed.avif }] : undefined}
+              alt={`${name} — кадр ${index + 1}`}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </div>
         )}
         <div className="lightbox__bar">
           <span>

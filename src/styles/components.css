@@ -241,6 +241,9 @@
 .hero__figure {
   position: relative;
   justify-self: center;
+  /* 100% колонки, не fit-content: пока картинка в пути, её max-content
+     равен нулю и фигура (с ней осциллограф в % от неё) схлопывается. */
+  width: 100%;
 }
 
 .hero__portrait-wrap {
@@ -683,6 +686,39 @@
 
 /* ---------- Дипломы ---------- */
 
+/* --- blur-up загрузка картинок (BlurImage): LQIP-фон живёт на picture-
+   обёртке и виден, пока пикселей нет; img кроссфейдится поверх по load.
+   contain, а не cover: LQIP сделан из того же источника — blur ложится
+   ровно на будущую область картинки, поля letterbox'а (hachure за сканом)
+   остаются прозрачными. --- */
+.blur-up-wrap {
+  display: block;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+
+.blur-up-wrap > img {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.blur-up-wrap > img.blur-up--loaded {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blur-up-wrap > img {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+/* Обёртка должна занимать бокс картинки, где он задан контейнером. */
+.diploma-card__media > .blur-up-wrap {
+  height: 100%;
+}
+
 .diploma-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -730,11 +766,25 @@
   background: radial-gradient(circle at 50% 45%, rgba(86, 200, 232, 0.25), rgba(0, 0, 0, 0.65));
 }
 
-.lightbox img {
-  max-width: 100%;
-  max-height: 78vh;
-  height: auto;
+/* Сцена лайтбокса: aspect-ratio приходит inline из image-meta.ts (реальные
+   размеры файла), поэтому бокс зарезервирован ДО загрузки — ни скачка, ни
+   искажения; width = 78vh * (w/h) повторяет прежний max-height: 78vh.
+   Сама картинка тянется на сцену целиком (LQIP-фон под ней — BlurImage). */
+.lightbox__stage {
+  width: min(100%, calc(78vh * var(--lb-ar, 1.41)));
+  aspect-ratio: var(--lb-ar, 600 / 424);
   margin: 0 auto;
+}
+
+.lightbox__stage > .blur-up-wrap {
+  width: 100%;
+  height: 100%;
+}
+
+.lightbox__stage > .blur-up-wrap > img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .lightbox__bar {
@@ -1051,6 +1101,25 @@
     display: block;
     text-align: right;
     padding: 10px 8px 14px 0;
+  }
+}
+
+/* Пометки листов 06 и 07 на мобилке (приёмка 09.11): absolute у дипломов
+   стоит ровно на строке тайтла («мама хранит оригиналы» × «ПРИЛОЖЕНИЕ А»),
+   у контактов — сталкивается со штампом «УТВЕРЖДЕНО К СБОРКЕ». Обе — в
+   поток, как у листа 03; breakpoint 767 — весь диапазон ниже md. */
+@media (max-width: 767px) {
+  #sheet-06 .pencil-mark {
+    position: static;
+    display: block;
+    text-align: right;
+    padding: 12px 8px 14px 0;
+  }
+  #sheet-07 .pencil-mark {
+    position: static;
+    display: block;
+    text-align: right;
+    padding: 0 8px 14px 0;
   }
 }
 

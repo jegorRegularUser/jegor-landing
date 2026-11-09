@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import portraitAvif from '../assets/portrait.avif';
 import portraitWebp from '../assets/portrait.webp';
 import portraitPng from '../assets/portrait.png';
+import portraitBlur from '../assets/portrait.blur.webp';
 import silhouette from '../assets/silhouette-hero.json';
 import { gsap, SplitText } from '../lib/gsap';
 import { useRough } from '../rough/useRough';
@@ -12,6 +13,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { useReducedMotion } from '../hooks/useMedia';
 import { changeToday } from '../state/ChangeLog';
 import { Sheet } from './Sheet';
+import { BlurImage } from './BlurImage';
 import { PencilMark } from './PencilMark';
 
 /** Окно осциллографа: живёт только в тёмной теме (спека §5.4). */
@@ -276,19 +278,20 @@ export function HeroSheet() {
 
           <div className="hero__portrait-wrap" ref={portraitRef}>
             <div ref={silhouetteRef} style={{ position: 'relative' }}>
-              <picture>
-                <source type="image/avif" srcSet={portraitAvif} />
-                <source type="image/webp" srcSet={portraitWebp} />
-                <img
-                  src={portraitPng}
-                  alt={t.hero.photoAlt}
-                  width={2000}
-                  height={2413}
-                  fetchPriority="high"
-                  decoding="async"
-                  className="hero__portrait"
-                />
-              </picture>
+              <BlurImage
+                lqip={portraitBlur}
+                src={portraitPng}
+                sources={[
+                  { type: 'image/avif', srcSet: portraitAvif },
+                  { type: 'image/webp', srcSet: portraitWebp },
+                ]}
+                alt={t.hero.photoAlt}
+                width={2000}
+                height={2413}
+                fetchPriority="high"
+                decoding="async"
+                className="hero__portrait"
+              />
             </div>
           </div>
 

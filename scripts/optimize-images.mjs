@@ -1,8 +1,11 @@
 /* Э5 (спека §8.1): конвертация ассетов в webp+avif. Запуск: npm run assets.
    Портрет: RGBA-вырезка как есть (resize до joinChannel не применять).
-   Сертификаты: превью 600px webp q78 + avif q50; полный PNG — для лайтбокса.
-   Скрины: assets-src/screens/*.png → 1200px webp q80 + avif q50. */
-import { mkdir, readdir, copyFile } from 'node:fs/promises';
+   Сертификаты: превью 600px webp q78 + avif q50; лайтбокс — полноразмерные
+   webp+avif (PNG остаётся fallback'ом <img>); LQIP-плейсхолдеры *.blur.webp
+   (~24px, инлайнятся Vite в data-URI) — фон для blur-up (BlurImage).
+   Скрины: assets-src/screens/*.png → 1200px webp q80 + avif q50.
+   Побочный выход: src/assets/image-meta.ts — реальные размеры (no-CLS). */
+import { mkdir, readdir, copyFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +19,18 @@ async function ensure(dir) {
   await mkdir(dir, { recursive: true });
 }
 
+/** LQIP: даунскейл до пары десятков px сам «блюрит», лёгкий blur сглаживает
+ *  квадраты; на выходе < 1KB — Vite инлайнит в data-URI (assetsInlineLimit). */
+async function lqip(src, out, width = 24, quality = 45) {
+  await sharp(src).resize({ width, withoutEnlargement: true }).blur(1).webp({ quality }).toFile(out);
+}
+
+/** Размеры после resize(width, withoutEnlargement): w может остаться исходным. */
+function scaledDims(meta, width) {
+  const w = Math.min(width, meta.width);
+  return { w, h: Math.round((meta.height * w) / meta.width) };
+}
+
 // --- портрет ---
 await ensure(OUT);
 const portraitSrc = path.join(SRC, 'portrait', 'hero-crop.png');
@@ -24,8 +39,9 @@ if (existsSync(portraitSrc)) {
   await img.clone().webp({ quality: 82, alphaQuality: 90, effort: 2 }).toFile(path.join(OUT, 'portrait.webp'));
   await img.clone().avif({ quality: 50, effort: 2 }).toFile(path.join(OUT, 'portrait.avif'));
   await copyFile(portraitSrc, path.join(OUT, 'portrait.png'));
+  await lqip(portraitSrc, path.join(OUT, 'portrait.blur.webp'), 32, 50);
   const meta = await sharp(path.join(OUT, 'portrait.webp')).metadata();
-  console.log(`portrait: ${meta.width}x${meta.height} (webp+avif+png)`);
+  console.log(`portrait: ${meta.width}x${meta.height} (webp+avif+png+blur)`);
 } else {
   console.warn('portrait source missing:', portraitSrc);
 }
@@ -33,17 +49,27 @@ if (existsSync(portraitSrc)) {
 // --- сертификаты ---
 const certSrc = path.join(SRC, 'certificates');
 const certOut = path.join(OUT, 'certs');
+const certMeta = {};
 await ensure(certOut);
 if (existsSync(certSrc)) {
   for (const name of await readdir(certSrc)) {
     if (!name.endsWith('.png')) continue;
     const base = path.basename(name, '.png');
     const src = sharp(path.join(certSrc, name));
+    const meta = await src.metadata();
     const preview = src.clone().resize({ width: 600, withoutEnlargement: true });
     await preview.clone().webp({ quality: 78, effort: 2 }).toFile(path.join(certOut, `${base}.webp`));
     await preview.clone().avif({ quality: 50, effort: 2 }).toFile(path.join(certOut, `${base}.avif`));
+    await lqip(path.join(certSrc, name), path.join(certOut, `${base}.blur.webp`));
+    // Лайтбокс: полноразмерный webp/avif (PNG — только fallback <img>).
+    const full = src.clone().resize({ width: 1600, withoutEnlargement: true });
+    await full.clone().webp({ quality: 82, effort: 2 }).toFile(path.join(certOut, `${base}.full.webp`));
+    await full.clone().avif({ quality: 55, effort: 2 }).toFile(path.join(certOut, `${base}.full.avif`));
     await copyFile(path.join(certSrc, name), path.join(certOut, `${base}.png`));
-    console.log(`cert ${base}: preview 600px + full png`);
+    const p = scaledDims(meta, 600);
+    const f = scaledDims(meta, 1600);
+    certMeta[base] = { pw: p.w, ph: p.h, w: f.w, h: f.h };
+    console.log(`cert ${base}: preview 600px + full webp/avif/png + blur`);
   }
 } else {
   console.warn('certificates source missing:', certSrc);
@@ -52,19 +78,39 @@ if (existsSync(certSrc)) {
 // --- скрины проектов (кладутся в assets-src/screens вручную/снятием демо) ---
 const screensSrc = path.join(SRC, 'screens');
 const screensOut = path.join(OUT, 'screens');
+const screenMeta = {};
 await ensure(screensOut);
 if (existsSync(screensSrc)) {
   for (const name of await readdir(screensSrc)) {
     if (!name.endsWith('.png')) continue;
     const base = path.basename(name, '.png');
     const src = sharp(path.join(screensSrc, name));
+    const meta = await src.metadata();
     const resized = src.clone().resize({ width: 1200, withoutEnlargement: true });
     await resized.clone().webp({ quality: 80, effort: 2 }).toFile(path.join(screensOut, `${base}.webp`));
     await resized.clone().avif({ quality: 50, effort: 2 }).toFile(path.join(screensOut, `${base}.avif`));
-    console.log(`screen ${base}: 1200px webp+avif`);
+    await lqip(path.join(screensSrc, name), path.join(screensOut, `${base}.blur.webp`), 32);
+    screenMeta[base] = scaledDims(meta, 1200);
+    console.log(`screen ${base}: 1200px webp+avif + blur`);
   }
 } else {
   console.warn('screens source missing (ок — Borrowed Vessels всё равно без скрина):', screensSrc);
 }
+
+// --- image-meta.ts: реальные размеры для width/height у <img> (no-CLS) ---
+const metaTs = `// GENERATED by scripts/optimize-images.mjs (npm run assets) — не править руками.
+// Размеры после ресайза: certMeta — превью 600px (pw/ph) и полная версия
+// 1600px (w/h) для лайтбокса; screenMeta — скрины 1200px.
+
+export interface ImageDims {
+  w: number;
+  h: number;
+}
+
+export const certMeta: Record<string, { pw: number; ph: number } & ImageDims> = ${JSON.stringify(certMeta, null, 2)};
+
+export const screenMeta: Record<string, ImageDims> = ${JSON.stringify(screenMeta, null, 2)};
+`;
+await writeFile(path.join(OUT, 'image-meta.ts'), metaTs);
 
 console.log('DONE');
