@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jegor.is-a.dev/sitemap.xml
